@@ -264,7 +264,13 @@ namespace CrowdControl.Games.Packs
                 case "revive":
                 {
                     var wType = _wType[codeParams[1]];
-                    ReviveBoss(request, ADDR_WEAPONS, wType.bossFlag, wType.bossName);
+                    if (!Connector.Read8(ADDR_AREA, out byte b))
+                    {
+                        DelayEffect(request);
+                        return;
+                    }
+                        if (b < 8) { ReviveBoss(request, ADDR_WEAPONS, wType.bossFlag, wType.bossName); }
+                        else { DisableWeapon(request, ADDR_WEAPONS, wType.bossFlag, wType.weapon); }
                     return;
                 }
                 case "barmor":
@@ -342,6 +348,20 @@ namespace CrowdControl.Games.Packs
                     PlaySFX(SFXType.HPIncrement);
                 }, TimeSpan.FromSeconds(30));
 
+        private void DisableWeapon(EffectRequest request, ushort address, BossDefeated bossDefeated, string weaponName)
+            => StartTimed(request,
+                () => Connector.Read8(address, out byte b) && ((b & (byte)bossDefeated) == (byte)bossDefeated),
+                () =>
+                {
+                    bool result = Connector.UnsetBits(address, (byte) bossDefeated, out _);
+                    if (result)
+                    {
+                        Connector.SendMessage($"{request.DisplayViewer} disabled your {weaponName}.");
+                        PlaySFX(SFXType.HPIncrement);
+                    }
+                    return result;
+                }, TimeSpan.FromSeconds(30));
+
         private string TryGetBossName()
         {
             try { return Connector.Read8(ADDR_AREA, out byte b) ? _aInfo[b] : "the boss"; }
@@ -364,6 +384,14 @@ namespace CrowdControl.Games.Packs
                         Connector.SendMessage($"{request.DisplayViewer}'s magnetic field has ended.");
                         return true;
                     }
+                case "revive":
+                {
+                    string[] codeParams = request.FinalCode.Split('_');
+                    var wType = _wType[codeParams[1]];
+                    Connector.SetBits(ADDR_WEAPONS, (byte)wType.bossFlag, out _);
+                    Connector.SendMessage($"{wType.weapon} is back online.");
+                    return true;
+                }
                 default:
                     return false;
             }
