@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using CrowdControl.Common;
 using JetBrains.Annotations;
 
@@ -48,20 +49,20 @@ namespace CrowdControl.Games.Packs
         private const ushort ADDR_HERO_COLOR_LIGHT = 0x0368;
         private const ushort ADDR_HERO_COLOR_DARK = 0x0369;
 
-        private Dictionary<string, (string name, byte value, SuitColor light, SuitColor dark, ushort address, byte limit)> _wType = new Dictionary<string, (string, byte, SuitColor, SuitColor, ushort, byte)>(StringComparer.InvariantCultureIgnoreCase)
+        private Dictionary<string, (string weapon, string bossName, byte value, BossDefeated bossFlag, SuitColor light, SuitColor dark, ushort address, byte limit)> _wType = new Dictionary<string, (string, string, byte, BossDefeated, SuitColor, SuitColor, ushort, byte)>(StringComparer.InvariantCultureIgnoreCase)
         {
-            {"buster", ("Mega Buster", 0, SuitColor.DefaultLight, SuitColor.DefaultDark, 0, 0)},
-            {"fire", ("Atomic Fire", 1, SuitColor.HLight, SuitColor.HDark, ADDR_ENERGY_HEAT, 14)},
-            {"air", ("Air Shooter", 2, SuitColor.ALight, SuitColor.ADark, ADDR_ENERGY_AIR, 14)},
-            {"leaf", ("Leaf Shield", 3, SuitColor.WLight, SuitColor.WDark, ADDR_ENERGY_WOOD, 14)},
-            {"bubble", ("Bubble Lead", 4, SuitColor.BLight, SuitColor.BDark, ADDR_ENERGY_BUBBLE, 14)},
-            {"quick", ("Quick Boomerang", 5, SuitColor.QLight, SuitColor.QDark, ADDR_ENERGY_QUICK, 14)},
-            {"time", ("Time Stopper", 6, SuitColor.FLight, SuitColor.FDark, ADDR_ENERGY_FLASH, 14)},
-            {"metal", ("Metal Blade", 7, SuitColor.MLight, SuitColor.MDark, ADDR_ENERGY_METAL, 14)},
-            {"crash", ("Crash Bomber", 8, SuitColor.CLight, SuitColor.CDark, ADDR_ENERGY_CRASH, 14)},
-            {"item1", ("Item 1", 9, SuitColor.ItemLight, SuitColor.ItemDark, ADDR_ENERGY_ITEM1, 14)},
-            {"item2", ("Item 2", 10, SuitColor.ItemLight, SuitColor.ItemDark, ADDR_ENERGY_ITEM2, 14)},
-            {"item3", ("Item 3", 11, SuitColor.ItemLight, SuitColor.ItemDark, ADDR_ENERGY_ITEM3, 14)}
+            {"buster", ("Mega Buster", "Mega Man", 0, 0, SuitColor.DefaultLight, SuitColor.DefaultDark, 0, 0)},
+            {"fire", ("Atomic Fire", "Heat Man", 1, BossDefeated.HeatMan, SuitColor.HLight, SuitColor.HDark, ADDR_ENERGY_HEAT, 14)},
+            {"air", ("Air Shooter", "Ait Man", 2, BossDefeated.AirMan, SuitColor.ALight, SuitColor.ADark, ADDR_ENERGY_AIR, 14)},
+            {"leaf", ("Leaf Shield", "Wood Man,", 3, BossDefeated.WoodMan, SuitColor.WLight, SuitColor.WDark, ADDR_ENERGY_WOOD, 14)},
+            {"bubble", ("Bubble Lead", "Bubble Man", 4, BossDefeated.BubbleMan, SuitColor.BLight, SuitColor.BDark, ADDR_ENERGY_BUBBLE, 14)},
+            {"quick", ("Quick Boomerang", "Quick Man", 5, BossDefeated.QuickMan, SuitColor.QLight, SuitColor.QDark, ADDR_ENERGY_QUICK, 14)},
+            {"time", ("Time Stopper", "Flash Man", 6, BossDefeated.FlashMan, SuitColor.FLight, SuitColor.FDark, ADDR_ENERGY_FLASH, 14)},
+            {"metal", ("Metal Blade", "Metal Man", 7, BossDefeated.MetalMan, SuitColor.MLight, SuitColor.MDark, ADDR_ENERGY_METAL, 14)},
+            {"crash", ("Crash Bomber", "Crash Man", 8, BossDefeated.CrashMan, SuitColor.CLight, SuitColor.CDark, ADDR_ENERGY_CRASH, 14)},
+            {"item1", ("Item 1", "Heat Man", 9,BossDefeated.HeatMan, SuitColor.ItemLight, SuitColor.ItemDark, ADDR_ENERGY_ITEM1, 14)},
+            {"item2", ("Item 2", "Air Man", 10,BossDefeated.AirMan, SuitColor.ItemLight, SuitColor.ItemDark, ADDR_ENERGY_ITEM2, 14)},
+            {"item3", ("Item 3", "Flash Man", 11,BossDefeated.FlashMan, SuitColor.ItemLight, SuitColor.ItemDark, ADDR_ENERGY_ITEM3, 14)}
         };
 
         private Dictionary<byte, string> _aInfo = new Dictionary<byte, string>()
@@ -131,36 +132,22 @@ namespace CrowdControl.Games.Packs
             {
                 List<Effect> effects = new List<Effect>
                 {
-                    new Effect("Weapon Lock", "lockweapon", ItemKind.Folder),
                     new Effect("Give Lives", "lives", new[] {"quantity9"}),
                     new Effect("Give E-Tanks", "etank", new[] {"quantity9"}),
-                    //new Effect("Give Health", "hpup", new[] {"megamanHealth"}),
-                    //new Effect("Take Health", "hpdown", new[] {"megamanHealth"}),
-                    //new Effect("Halve Health", "hphalf"),
                     new Effect("Boss E-Tank", "bosshpfull"),
                     new Effect("Refill Health", "hpfull"),
-                    new Effect("Refill Weapon Energy", "fillweapon", ItemKind.Folder),
-                    new Effect("Refill Atomic Fire", "fillh", "fillweapon"),
-                    new Effect("Refill Air Shooter", "filla", "fillweapon"),
-                    new Effect("Refill Leaf Shield ", "fillw", "fillweapon"),
-                    new Effect("Refill Bubble Lead ", "fillb", "fillweapon"),
-                    new Effect("Refill Quick Boomerang ", "fillq", "fillweapon"),
-                    new Effect("Refill Time Stopper ", "fillf", "fillweapon"),
-                    new Effect("Refill Metal Blade ", "fillm", "fillweapon"),
-                    new Effect("Refill Crash Stopper ", "fillc", "fillweapon"),
-                    new Effect("Refill Item 1", "fillitem1", "fillweapon"),
-                    new Effect("Refill Item 2", "fillitem2", "fillweapon"),
-                    new Effect("Refill Item 3", "fillitem3", "fillweapon"),
+                    new Effect("Weapon Lock", "lockweapon", ItemKind.Folder),
+                    new Effect("Refill Weapon Energy", "refillweapon", ItemKind.Folder),
+                    new Effect("Rebuild Robot Master", "reviveboss", ItemKind.Folder),
                     //new Effect("Black Armor Mega Man", "barmor"),
                     new Effect("Grant Invulnerability (15 seconds)", "iframes"),
                     new Effect("Moonwalk", "moonwalk"),
-                    new Effect("Magnet Floors", "iframes")
+                    new Effect("Magnet Floors", "magfloors")
                 };
 
-                foreach (string weapon in _wType.Keys)
-                {
-                    effects.Add(new Effect($"Force Weapon to {weapon} (15 seconds)", $"set_{weapon.Replace(" ", "").ToLowerInvariant()}", "lockweapon"));
-                }
+                effects.AddRange(_wType.Select(t => new Effect($"Force Weapon to {t.Value.weapon} (15 seconds)", $"lock_{t.Key}", "lockweapon")));
+                effects.AddRange(_wType.Skip(1).Select(t => new Effect($"Refill {t.Value.weapon}", $"refill_{t.Key}", "refillweapon")));
+                effects.AddRange(_wType.Skip(1).Take(8).Select(t => new Effect($"Rebuild {t.Value.bossName}", $"revive_{t.Key}", "reviveboss")));
 
                 return effects;
             }
@@ -218,10 +205,10 @@ namespace CrowdControl.Games.Packs
             string[] codeParams = request.FinalCode.Split('_');
             switch (codeParams[0])
             {
-                case "set":
+                case "lock":
                     {
                         var wType = _wType[codeParams[1]];
-                        ForceWeapon(request, wType.value, wType.light, wType.dark, wType.name);
+                        ForceWeapon(request, wType.value, wType.light, wType.dark, wType.weapon);
                         return;
                     }
                 case "lives":
@@ -247,38 +234,6 @@ namespace CrowdControl.Games.Packs
                             PlaySFX(SFXType.Item);
                         });
                     return;
-                case "hpup":
-                    TryEffect(request,
-                        () => Connector.RangeAdd8(ADDR_HP, request.Quantity, 0, 28, false),
-                        () => true,
-                        () =>
-                        {
-                            Connector.SendMessage($"{request.DisplayViewer} gave you {request.Quantity} HP.");
-                            PlaySFX(SFXType.HPIncrement);
-                        });
-                    return;
-                case "hpdown":
-                    TryEffect(request,
-                        () => Connector.RangeAdd8(ADDR_HP, -request.Quantity, 1, 28, false),
-                        () => true,
-                        () =>
-                        {
-                            Connector.SendMessage($"{request.DisplayViewer} took {request.Quantity} HP.");
-                            PlaySFX(SFXType.Damage);
-                        });
-                    return;
-                case "hphalf":
-                    {
-                        TryEffect(request,
-                            () => Connector.Read8(ADDR_HP, out byte b) && Connector.Write8(ADDR_HP, (byte)(b / 2)),
-                            () => true,
-                            () =>
-                            {
-                                Connector.SendMessage($"{request.DisplayViewer} cut your HP in Half.");
-                                PlaySFX(SFXType.Damage);
-                            });
-                        return;
-                    }
                 case "hpfull":
                     {
                         TryEffect(request,
@@ -301,11 +256,17 @@ namespace CrowdControl.Games.Packs
                         return;
                     }
                 case "refill":
-                    {
-                        var wType = _wType[codeParams[1]];
-                        FillWeapon(request, wType.address, wType.name, wType.limit);
-                        return;
-                    }
+                {
+                    var wType = _wType[codeParams[1]];
+                    FillWeapon(request, wType.address, wType.weapon, wType.limit);
+                    return;
+                }
+                case "revive":
+                {
+                    var wType = _wType[codeParams[1]];
+                    ReviveBoss(request, ADDR_WEAPONS, wType.bossFlag, wType.bossName);
+                    return;
+                }
                 case "barmor":
                     TryEffect(request,
                         () => Connector.Write8(ADDR_HERO_COLOR_LIGHT, (byte)SuitColor.BDark),
@@ -370,6 +331,16 @@ namespace CrowdControl.Games.Packs
                     Connector.SendMessage($"{request.DisplayViewer} filled your {weaponName} power.");
                     PlaySFX(SFXType.HPIncrement);
                 });
+
+        private void ReviveBoss(EffectRequest request, ushort address, BossDefeated bossDefeated, string bossName)
+            => TryEffect(request,
+                () => Connector.Read8(address, out byte b) && ((b & (byte)bossDefeated) == (byte)bossDefeated),
+                () => Connector.UnsetBits(address, (byte)bossDefeated, out _),
+                () =>
+                {
+                    Connector.SendMessage($"{request.DisplayViewer} rebuilt {bossName}.");
+                    PlaySFX(SFXType.HPIncrement);
+                }, TimeSpan.FromSeconds(30));
 
         private string TryGetBossName()
         {
