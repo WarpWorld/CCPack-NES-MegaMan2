@@ -241,7 +241,7 @@ namespace CrowdControl.Games.Packs
                             () => Connector.Write8(ADDR_HP, 28),
                             () =>
                             {
-                                Connector.SendMessage($"{request.DisplayViewer} refilled your HP.");
+                                Connector.SendMessage($"{request.DisplayViewer} refilled your health.");
                                 PlaySFX(SFXType.HPIncrement);
                             });
                         return;
@@ -251,7 +251,7 @@ namespace CrowdControl.Games.Packs
                         TryEffect(request,
                             () => Connector.Read8(ADDR_BOSS_HP, out byte b) && (b != 0) && (b <= 14),
                             () => Connector.Write8(ADDR_BOSS_HP, 28),
-                            () => Connector.SendMessage($"{request.DisplayViewer} refilled {TryGetBossName()}'s HP."));
+                            () => Connector.SendMessage($"{request.DisplayViewer} refilled {TryGetBossName()}'s health."));
                         PlaySFX(SFXType.HPIncrement);
                         return;
                     }
