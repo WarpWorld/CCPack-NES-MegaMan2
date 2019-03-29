@@ -133,16 +133,16 @@ namespace CrowdControl.Games.Packs
                 List<Effect> effects = new List<Effect>
                 {
                     new Effect("Give Lives", "lives", new[] {"quantity9"}),
-                    new Effect("Give E-Tanks", "etank", new[] {"quantity9"}),
+                    new Effect("Give E-Tanks", "etank"),
                     new Effect("Boss E-Tank", "bosshpfull"),
                     new Effect("Refill Health", "hpfull"),
-                    new Effect("Weapon Lock", "lockweapon", ItemKind.Folder),
+                    new Effect("Weapon Lock (15 seconds)", "lockweapon", ItemKind.Folder),
                     new Effect("Refill Weapon Energy", "refillweapon", ItemKind.Folder),
                     new Effect("Rebuild Robot Master", "reviveboss", ItemKind.Folder),
                     //new Effect("Black Armor Mega Man", "barmor"),
                     new Effect("Grant Invulnerability (15 seconds)", "iframes"),
-                    new Effect("Moonwalk", "moonwalk"),
-                    new Effect("Magnet Floors", "magfloors")
+                    new Effect("Moonwalk (15 seconds)", "moonwalk"),
+                    new Effect("Magnet Floors (15 seconds)", "magfloors")
                 };
 
                 effects.AddRange(_wType.Select(t => new Effect($"Force Weapon to {t.Value.weapon} (15 seconds)", $"lock_{t.Key}", "lockweapon")));
@@ -196,12 +196,18 @@ namespace CrowdControl.Games.Packs
 
         public override Game Game { get; } = new Game(11, "Mega Man 2", "MegaMan2", "NES", ConnectorType.NESConnector);
 
-        protected override bool IsReady(EffectRequest request) => true;
+        protected override bool IsReady(EffectRequest request) => Connector.Read8(0x00b1, out byte b) && (b == 0);
 
         protected override void RequestData(DataRequest request) => Respond(request, request.Key, null, false, $"Variable name \"{request.Key}\" not known");
 
         protected override void StartEffect(EffectRequest request)
         {
+            if (!IsReady(request))
+            {
+                DelayEffect(request, TimeSpan.FromSeconds(5));
+                return;
+            }
+
             string[] codeParams = request.FinalCode.Split('_');
             switch (codeParams[0])
             {
@@ -213,7 +219,11 @@ namespace CrowdControl.Games.Packs
                     }
                 case "lives":
                     {
-                        byte lives = (byte)request.AllItems[1].Reduce(_player);
+                        if (!byte.TryParse(codeParams[1], out byte lives))
+                        {
+                            Respond(request, EffectStatus.FailTemporary, "Invalid life quantity.");
+                            return;
+                        }
                         TryEffect(request,
                             () => Connector.RangeAdd8(ADDR_LIVES, lives, 0, 9, false),
                             () => true,
@@ -225,12 +235,12 @@ namespace CrowdControl.Games.Packs
                         return;
                     }
                 case "etank":
-                    TryEffect(request,
-                        () => Connector.RangeAdd8(ADDR_ETANKS, request.Quantity, 0, 4, false),
+                        TryEffect(request,
+                        () => Connector.RangeAdd8(ADDR_ETANKS, 1, 0, 4, false),
                         () => true,
                         () =>
                         {
-                            Connector.SendMessage($"{request.DisplayViewer} sent you {request.Quantity} E-Tanks.");
+                            Connector.SendMessage($"{request.DisplayViewer} sent you an E-Tank.");
                             PlaySFX(SFXType.Item);
                         });
                     return;
@@ -269,7 +279,7 @@ namespace CrowdControl.Games.Packs
                         DelayEffect(request);
                         return;
                     }
-                        if (b < 8) { ReviveBoss(request, ADDR_WEAPONS, wType.bossFlag, wType.bossName); }
+                        if (b < 8) { ReviveBoss(request, ADDR_WEAPONS, (byte)wType.bossFlag, wType.bossName); }
                         else { DisableWeapon(request, ADDR_WEAPONS, wType.bossFlag, wType.weapon); }
                     return;
                 }
@@ -297,7 +307,7 @@ namespace CrowdControl.Games.Packs
                             if (result) { Connector.SendMessage($"{request.DisplayViewer} inverted your left/right."); }
                             return result;
                         },
-                        TimeSpan.FromSeconds(60));
+                        TimeSpan.FromSeconds(15));
                     return;
                 case "magfloors":
                     StartTimed(request,
@@ -308,7 +318,7 @@ namespace CrowdControl.Games.Packs
                             if (result) { Connector.SendMessage($"{request.DisplayViewer} has magnetized the floors."); }
                             return result;
                         },
-                        TimeSpan.FromSeconds(60));
+                        TimeSpan.FromSeconds(15));
                     return;
             }
         }
@@ -338,15 +348,19 @@ namespace CrowdControl.Games.Packs
                     PlaySFX(SFXType.HPIncrement);
                 });
 
-        private void ReviveBoss(EffectRequest request, ushort address, BossDefeated bossDefeated, string bossName)
-            => TryEffect(request,
-                () => Connector.Read8(address, out byte b) && ((b & (byte)bossDefeated) == (byte)bossDefeated),
-                () => Connector.UnsetBits(address, (byte)bossDefeated, out _),
+        private void ReviveBoss(EffectRequest request, ushort address, byte bossDefeated, string bossName)
+        {
+            byte b=0;
+            TryEffect(request,
+                () => Connector.Read8(address, out b) && ((b & bossDefeated) == bossDefeated),
+                () => Connector.UnsetBits(address, bossDefeated, out _),
                 () =>
                 {
+                    Log.Message($"{b} {bossDefeated}");
                     Connector.SendMessage($"{request.DisplayViewer} rebuilt {bossName}.");
                     PlaySFX(SFXType.HPIncrement);
-                }, TimeSpan.FromSeconds(30));
+                });
+        }
 
         private void DisableWeapon(EffectRequest request, ushort address, BossDefeated bossDefeated, string weaponName)
             => StartTimed(request,
@@ -360,7 +374,7 @@ namespace CrowdControl.Games.Packs
                         PlaySFX(SFXType.HPIncrement);
                     }
                     return result;
-                }, TimeSpan.FromSeconds(30));
+                }, TimeSpan.FromSeconds(15));
 
         private string TryGetBossName()
         {
