@@ -155,8 +155,7 @@ namespace CrowdControl.Games.Packs
 
         public override List<Common.ItemType> ItemTypes => new List<Common.ItemType>(new[]
         {
-            new Common.ItemType("Quantity", "quantity9", Common.ItemType.Subtype.Slider, "{\"min\":1,\"max\":9}"),
-            new Common.ItemType("Health", "megamanHealth", Common.ItemType.Subtype.Slider, "{\"min\":1,\"max\":28}")
+            new Common.ItemType("Quantity", "quantity9", Common.ItemType.Subtype.Slider, "{\"min\":1,\"max\":9}")
         });
 
         public override List<ROMInfo> ROMTable => new List<ROMInfo>(new[]
@@ -197,7 +196,7 @@ namespace CrowdControl.Games.Packs
 
         public override Game Game { get; } = new Game(11, "Mega Man 2", "MegaMan2", "NES", ConnectorType.NESConnector);
 
-        protected override bool IsReady(EffectRequest request) => Connector.Read8(0x00b1, out byte b) && (b <= 1);
+        protected override bool IsReady(EffectRequest request) => Connector.Read8(0x00b1, out byte b) && (b < 0x80);
 
         protected override void RequestData(DataRequest request) => Respond(request, request.Key, null, false, $"Variable name \"{request.Key}\" not known");
 
@@ -205,6 +204,8 @@ namespace CrowdControl.Games.Packs
         {
             if (!IsReady(request))
             {
+                Connector.Read8(0x00b1, out byte b);
+                Log.Message($"b1 is {b}");
                 DelayEffect(request, TimeSpan.FromSeconds(5));
                 return;
             }
@@ -246,7 +247,6 @@ namespace CrowdControl.Games.Packs
                         });
                     return;
                 case "hpfull":
-                    {
                         TryEffect(request,
                             () => Connector.Read8(ADDR_HP, out byte b) && (b < 14),
                             () => Connector.Write8(ADDR_HP, 28),
@@ -254,18 +254,30 @@ namespace CrowdControl.Games.Packs
                             {
                                 Connector.SendMessage($"{request.DisplayViewer} refilled your health.");
                                 PlaySFX(SFXType.HPIncrement);
-                            });
+                            }, TimeSpan.FromSeconds(1));
                         return;
-                    }
                 case "bosshpfull":
+                {
+                    if (!Connector.Read8(ADDR_AREA, out byte b))
                     {
-                        TryEffect(request,
-                            () => Connector.Read8(ADDR_BOSS_HP, out byte b) && (b != 0) && (b <= 14),
-                            () => Connector.Write8(ADDR_BOSS_HP, 28),
-                            () => Connector.SendMessage($"{request.DisplayViewer} refilled {TryGetBossName()}'s health."));
-                        PlaySFX(SFXType.HPIncrement);
+                        DelayEffect(request);
                         return;
                     }
+                    if ((b == 0x09) || (b == 0x0B))
+                    {
+                        DelayEffect(request, TimeSpan.FromSeconds(30));
+                        return;
+                    }
+                    TryEffect(request,
+                        () => Connector.Read8(ADDR_BOSS_HP, out byte b) && (b != 0) && (b <= 14),
+                        () => Connector.Write8(ADDR_BOSS_HP, 28),
+                        () =>
+                        {
+                            Connector.SendMessage($"{request.DisplayViewer} refilled {TryGetBossName()}'s health.");
+                            PlaySFX(SFXType.HPIncrement);
+                        }, TimeSpan.FromSeconds(1));
+                    return;
+                }
                 case "refill":
                 {
                     var wType = _wType[codeParams[1]];
