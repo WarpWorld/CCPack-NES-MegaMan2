@@ -136,13 +136,13 @@ namespace CrowdControl.Games.Packs
                     new Effect("Give E-Tanks", "etank"),
                     new Effect("Boss E-Tank", "bosshpfull"),
                     new Effect("Refill Health", "hpfull"),
-                    new Effect("Weapon Lock (15 seconds)", "lockweapon", ItemKind.Folder),
+                    new Effect("Weapon Lock (45 seconds)", "lockweapon", ItemKind.Folder),
                     new Effect("Refill Weapon Energy", "refillweapon", ItemKind.Folder),
                     new Effect("Rebuild Robot Master", "reviveboss", ItemKind.Folder),
                     //new Effect("Black Armor Mega Man", "barmor"),
                     new Effect("Grant Invulnerability (15 seconds)", "iframes"),
-                    new Effect("Moonwalk (15 seconds)", "moonwalk"),
-                    new Effect("Magnet Floors (15 seconds)", "magfloors")
+                    new Effect("Moonwalk (45 seconds)", "moonwalk"),
+                    new Effect("Magnet Floors (45 seconds)", "magfloors")
                 };
 
                 effects.AddRange(_wType.Select(t => new Effect($"Force Weapon to {t.Value.weapon} (15 seconds)", $"lock_{t.Key}", "lockweapon")));
@@ -163,6 +163,7 @@ namespace CrowdControl.Games.Packs
         {
             new ROMInfo("Mega Man 2", null, Patching.Ignore, ROMStatus.ValidPatched,s => Patching.MD5(s, "caaeb9ee3b52839de261fd16f93103e6")),
             new ROMInfo("Rockman 2 - Dr. Wily no Nazo", null, Patching.Ignore, ROMStatus.ValidPatched,s => Patching.MD5(s, "055fb8dc626fb1fbadc0a193010a3e3f")),
+            new ROMInfo("Mega Man 2 Randomizer", null, Patching.Ignore, ROMStatus.ValidPatched, s=>s.Length==262160)
         });
 
         private enum SFXType : byte
@@ -196,7 +197,7 @@ namespace CrowdControl.Games.Packs
 
         public override Game Game { get; } = new Game(11, "Mega Man 2", "MegaMan2", "NES", ConnectorType.NESConnector);
 
-        protected override bool IsReady(EffectRequest request) => Connector.Read8(0x00b1, out byte b) && (b == 0);
+        protected override bool IsReady(EffectRequest request) => Connector.Read8(0x00b1, out byte b) && (b <= 1);
 
         protected override void RequestData(DataRequest request) => Respond(request, request.Key, null, false, $"Variable name \"{request.Key}\" not known");
 
@@ -294,49 +295,54 @@ namespace CrowdControl.Games.Packs
                     RepeatAction(request, TimeSpan.FromSeconds(15),
                         () => Connector.SendMessage($"{request.DisplayViewer} deployed an invulnerability field."),
                         () => true, TimeSpan.FromSeconds(0.5),
-                        () => true, TimeSpan.Zero,
+                        () => true, TimeSpan.FromSeconds(5),
                         () => Connector.Write8(ADDR_IFRAMES, 255), TimeSpan.FromSeconds(0.5), true)
                         .WhenCompleted.ContinueWith(t => Connector.SendMessage($"{request.DisplayViewer}'s invulnerability field has dispersed."));
                     return;
                 case "moonwalk":
                     StartTimed(request,
-                        () => true,
+                        () => Connector.Read8(0x8904, out byte b) && (b != 0x49),
                         () =>
                         {
                             bool result = Connector.Write8(0x8904, 0x49);
                             if (result) { Connector.SendMessage($"{request.DisplayViewer} inverted your left/right."); }
                             return result;
                         },
-                        TimeSpan.FromSeconds(15));
+                        TimeSpan.FromSeconds(45));
                     return;
                 case "magfloors":
                     StartTimed(request,
-                        () => true,
+                        () => Connector.Read8(0xd3c8, out byte b) && (b != 0x03),
                         () =>
                         {
                             bool result = Connector.Write8(0xd3c8, 0x03);
                             if (result) { Connector.SendMessage($"{request.DisplayViewer} has magnetized the floors."); }
                             return result;
                         },
-                        TimeSpan.FromSeconds(15));
+                        TimeSpan.FromSeconds(45));
                     return;
             }
         }
 
-        private void ForceWeapon(EffectRequest request, byte wType, SuitColor lightColor, SuitColor darkColor, string weaponName)
-            => RepeatAction(request, TimeSpan.FromSeconds(15),
-                () => true,
+
+        private volatile bool _forceActive = false;
+
+        private void ForceWeapon(EffectRequest request, byte wType, SuitColor lightColor, SuitColor darkColor,
+            string weaponName)
+            => RepeatAction(request, TimeSpan.FromSeconds(45),
+                () => (_forceActive == false),
                 () =>
                 {
+                    _forceActive = true;
                     Connector.SendMessage($"{request.DisplayViewer} set your weapon to {weaponName}.");
                     PlaySFX(SFXType.BusterShot);
                     return true;
-                }, TimeSpan.Zero,
-                () => true, TimeSpan.Zero,
+                }, TimeSpan.FromSeconds(5),
+                () => true, TimeSpan.FromSeconds(5),
                 () => Connector.Write8(ADDR_POWER, wType) &&
-                      Connector.Write8(ADDR_HERO_COLOR_LIGHT, (byte)lightColor) &&
-                      Connector.Write8(ADDR_HERO_COLOR_DARK, (byte)darkColor),
-                TimeSpan.FromSeconds(1), true);
+                      Connector.Write8(ADDR_HERO_COLOR_LIGHT, (byte) lightColor) &&
+                      Connector.Write8(ADDR_HERO_COLOR_DARK, (byte) darkColor),
+                TimeSpan.FromSeconds(1), true).WhenCompleted.Then(t => _forceActive = false);
 
         private void FillWeapon(EffectRequest request, ushort address, string weaponName, byte limit)
             => TryEffect(request,
