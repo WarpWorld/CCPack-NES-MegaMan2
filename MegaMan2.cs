@@ -237,65 +237,65 @@ namespace CrowdControl.Games.Packs
                         return;
                     }
                 case "etank":
-                        TryEffect(request,
-                        () => Connector.RangeAdd8(ADDR_ETANKS, 1, 0, 4, false),
-                        () => true,
-                        () =>
-                        {
-                            Connector.SendMessage($"{request.DisplayViewer} sent you an E-Tank.");
-                            PlaySFX(SFXType.Item);
-                        });
+                    TryEffect(request,
+                    () => Connector.RangeAdd8(ADDR_ETANKS, 1, 0, 4, false),
+                    () => true,
+                    () =>
+                    {
+                        Connector.SendMessage($"{request.DisplayViewer} sent you an E-Tank.");
+                        PlaySFX(SFXType.Item);
+                    });
                     return;
                 case "hpfull":
-                        TryEffect(request,
-                            () => Connector.Read8(ADDR_HP, out byte b) && (b < 14),
-                            () => Connector.Write8(ADDR_HP, 28),
-                            () =>
-                            {
-                                Connector.SendMessage($"{request.DisplayViewer} refilled your health.");
-                                PlaySFX(SFXType.HPIncrement);
-                            }, TimeSpan.FromSeconds(1));
-                        return;
-                case "bosshpfull":
-                {
-                    if (!Connector.Read8(ADDR_AREA, out byte b))
-                    {
-                        DelayEffect(request);
-                        return;
-                    }
-                    if ((b == 0x09) || (b == 0x0B))
-                    {
-                        DelayEffect(request, TimeSpan.FromSeconds(30));
-                        return;
-                    }
                     TryEffect(request,
-                        () => Connector.Read8(ADDR_BOSS_HP, out byte b) && (b != 0) && (b <= 14),
-                        () => Connector.Write8(ADDR_BOSS_HP, 28),
+                        () => Connector.Read8(ADDR_HP, out byte b) && (b < 14),
+                        () => Connector.Write8(ADDR_HP, 28),
                         () =>
                         {
-                            Connector.SendMessage($"{request.DisplayViewer} refilled {TryGetBossName()}'s health.");
+                            Connector.SendMessage($"{request.DisplayViewer} refilled your health.");
                             PlaySFX(SFXType.HPIncrement);
                         }, TimeSpan.FromSeconds(1));
                     return;
-                }
-                case "refill":
-                {
-                    var wType = _wType[codeParams[1]];
-                    FillWeapon(request, wType.address, wType.weapon, wType.limit);
-                    return;
-                }
-                case "revive":
-                {
-                    var wType = _wType[codeParams[1]];
-                    if (!Connector.Read8(ADDR_AREA, out byte b))
+                case "bosshpfull":
                     {
-                        DelayEffect(request);
+                        if (!Connector.Read8(ADDR_AREA, out byte area))
+                        {
+                            DelayEffect(request);
+                            return;
+                        }
+                        if ((area == 0x09) || (area == 0x0B))
+                        {
+                            DelayEffect(request, TimeSpan.FromSeconds(30));
+                            return;
+                        }
+                        TryEffect(request,
+                            () => Connector.Read8(ADDR_BOSS_HP, out byte hp) && (hp != 0) && (hp <= 14),
+                            () => Connector.Write8(ADDR_BOSS_HP, 28),
+                            () =>
+                            {
+                                Connector.SendMessage($"{request.DisplayViewer} refilled {TryGetBossName()}'s health.");
+                                PlaySFX(SFXType.HPIncrement);
+                            }, TimeSpan.FromSeconds(1));
                         return;
                     }
+                case "refill":
+                    {
+                        var wType = _wType[codeParams[1]];
+                        FillWeapon(request, wType.address, wType.weapon, wType.limit);
+                        return;
+                    }
+                case "revive":
+                    {
+                        var wType = _wType[codeParams[1]];
+                        if (!Connector.Read8(ADDR_AREA, out byte b))
+                        {
+                            DelayEffect(request);
+                            return;
+                        }
                         if (b < 8) { ReviveBoss(request, ADDR_WEAPONS, (byte)wType.bossFlag, wType.bossName); }
                         else { DisableWeapon(request, ADDR_WEAPONS, wType.bossFlag, wType.weapon); }
-                    return;
-                }
+                        return;
+                    }
                 case "barmor":
                     TryEffect(request,
                         () => Connector.Write8(ADDR_HERO_COLOR_LIGHT, (byte)SuitColor.BDark),
@@ -352,8 +352,8 @@ namespace CrowdControl.Games.Packs
                 }, TimeSpan.FromSeconds(5),
                 () => true, TimeSpan.FromSeconds(5),
                 () => Connector.Write8(ADDR_POWER, wType) &&
-                      Connector.Write8(ADDR_HERO_COLOR_LIGHT, (byte) lightColor) &&
-                      Connector.Write8(ADDR_HERO_COLOR_DARK, (byte) darkColor),
+                      Connector.Write8(ADDR_HERO_COLOR_LIGHT, (byte)lightColor) &&
+                      Connector.Write8(ADDR_HERO_COLOR_DARK, (byte)darkColor),
                 TimeSpan.FromSeconds(1), true).WhenCompleted.Then(t => _forceActive = false);
 
         private void FillWeapon(EffectRequest request, ushort address, string weaponName, byte limit)
@@ -368,7 +368,7 @@ namespace CrowdControl.Games.Packs
 
         private void ReviveBoss(EffectRequest request, ushort address, byte bossDefeated, string bossName)
         {
-            byte b=0;
+            byte b = 0;
             TryEffect(request,
                 () => Connector.Read8(address, out b) && ((b & bossDefeated) == bossDefeated),
                 () => Connector.UnsetBits(address, bossDefeated, out _),
@@ -385,7 +385,7 @@ namespace CrowdControl.Games.Packs
                 () => Connector.Read8(address, out byte b) && ((b & (byte)bossDefeated) == (byte)bossDefeated),
                 () =>
                 {
-                    bool result = Connector.UnsetBits(address, (byte) bossDefeated, out _);
+                    bool result = Connector.UnsetBits(address, (byte)bossDefeated, out _);
                     if (result)
                     {
                         Connector.SendMessage($"{request.DisplayViewer} disabled your {weaponName}.");
@@ -417,13 +417,13 @@ namespace CrowdControl.Games.Packs
                         return true;
                     }
                 case "revive":
-                {
-                    string[] codeParams = request.FinalCode.Split('_');
-                    var wType = _wType[codeParams[1]];
-                    Connector.SetBits(ADDR_WEAPONS, (byte)wType.bossFlag, out _);
-                    Connector.SendMessage($"{wType.weapon} is back online.");
-                    return true;
-                }
+                    {
+                        string[] codeParams = request.FinalCode.Split('_');
+                        var wType = _wType[codeParams[1]];
+                        Connector.SetBits(ADDR_WEAPONS, (byte)wType.bossFlag, out _);
+                        Connector.SendMessage($"{wType.weapon} is back online.");
+                        return true;
+                    }
                 default:
                     return false;
             }
