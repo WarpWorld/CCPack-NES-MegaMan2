@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using CrowdControl.Common;
 using JetBrains.Annotations;
 
@@ -14,7 +15,12 @@ namespace CrowdControl.Games.Packs
 
         public MegaMan2([NotNull] IPlayer player, [NotNull] Func<CrowdControlBlock, bool> responseHandler, [NotNull] Action<object> statusUpdateHandler) : base(responseHandler, statusUpdateHandler) => _player = player;
 
-        private readonly string ChannelName = "Username";
+        private volatile bool _quitting = false;
+        public override void Dispose()
+        {
+            _quitting = true;
+            base.Dispose();
+        }
 
         private const ushort ADDR_AREA = 0x002A;
         private const ushort ADDR_PHYSICS = 0x003D;
@@ -49,11 +55,13 @@ namespace CrowdControl.Games.Packs
         private const ushort ADDR_HERO_COLOR_LIGHT = 0x0368;
         private const ushort ADDR_HERO_COLOR_DARK = 0x0369;
 
+        private const ushort ADDR_UNKNOWN1 = 0x0069;//should be 0x0E
+
         private Dictionary<string, (string weapon, string bossName, byte value, BossDefeated bossFlag, SuitColor light, SuitColor dark, ushort address, byte limit)> _wType = new Dictionary<string, (string, string, byte, BossDefeated, SuitColor, SuitColor, ushort, byte)>(StringComparer.InvariantCultureIgnoreCase)
         {
             {"buster", ("Mega Buster", "Mega Man", 0, 0, SuitColor.DefaultLight, SuitColor.DefaultDark, 0, 0)},
             {"fire", ("Atomic Fire", "Heat Man", 1, BossDefeated.HeatMan, SuitColor.HLight, SuitColor.HDark, ADDR_ENERGY_HEAT, 14)},
-            {"air", ("Air Shooter", "Ait Man", 2, BossDefeated.AirMan, SuitColor.ALight, SuitColor.ADark, ADDR_ENERGY_AIR, 14)},
+            {"air", ("Air Shooter", "Air Man", 2, BossDefeated.AirMan, SuitColor.ALight, SuitColor.ADark, ADDR_ENERGY_AIR, 14)},
             {"leaf", ("Leaf Shield", "Wood Man,", 3, BossDefeated.WoodMan, SuitColor.WLight, SuitColor.WDark, ADDR_ENERGY_WOOD, 14)},
             {"bubble", ("Bubble Lead", "Bubble Man", 4, BossDefeated.BubbleMan, SuitColor.BLight, SuitColor.BDark, ADDR_ENERGY_BUBBLE, 14)},
             {"quick", ("Quick Boomerang", "Quick Man", 5, BossDefeated.QuickMan, SuitColor.QLight, SuitColor.QDark, ADDR_ENERGY_QUICK, 14)},
@@ -216,7 +224,7 @@ namespace CrowdControl.Games.Packs
                 case "lock":
                     {
                         var wType = _wType[codeParams[1]];
-                        ForceWeapon(request, wType.value, wType.light, wType.dark, wType.weapon);
+                        ForceWeapon(request, wType.value, (byte) wType.bossFlag, wType.light, wType.dark, wType.weapon);
                         return;
                     }
                 case "lives":
@@ -336,13 +344,18 @@ namespace CrowdControl.Games.Packs
             }
         }
 
-
         private volatile bool _forceActive = false;
-
-        private void ForceWeapon(EffectRequest request, byte wType, SuitColor lightColor, SuitColor darkColor,
-            string weaponName)
-            => RepeatAction(request, TimeSpan.FromSeconds(45),
-                () => (_forceActive == false),
+        private void ForceWeapon(EffectRequest request, byte wType, byte bossClear, SuitColor lightColor, SuitColor darkColor, string weaponName)
+        {
+            bool hadBefore = false;
+            RepeatAction(request, TimeSpan.FromSeconds(45),
+                () => {
+                    if (_forceActive) { return false; }
+                    if (!(Connector.Read8(ADDR_UNKNOWN1, out byte b) && (b != 0x0E))) { return false; }
+                    bool result = Connector.Read8(ADDR_WEAPONS, out byte w);
+                    hadBefore = ((w & bossClear) != bossClear);
+                    return result;
+                },
                 () =>
                 {
                     _forceActive = true;
@@ -354,7 +367,20 @@ namespace CrowdControl.Games.Packs
                 () => Connector.Write8(ADDR_POWER, wType) &&
                       Connector.Write8(ADDR_HERO_COLOR_LIGHT, (byte)lightColor) &&
                       Connector.Write8(ADDR_HERO_COLOR_DARK, (byte)darkColor),
-                TimeSpan.FromSeconds(1), true).WhenCompleted.Then(t => _forceActive = false);
+                TimeSpan.FromSeconds(1), true).WhenCompleted.Then(async t =>
+            {
+                while (!(Connector.Read8(ADDR_UNKNOWN1, out byte b) && (b != 0x0E)))
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(1));
+                    if (_quitting) { return; }
+                }
+                Connector.Write8(ADDR_HERO_COLOR_LIGHT, (byte)SuitColor.DefaultLight);
+                Connector.Write8(ADDR_HERO_COLOR_DARK, (byte)SuitColor.DefaultDark);
+                Connector.Write8(ADDR_POWER, 0x00);
+                if (!hadBefore) { Connector.UnsetBits(ADDR_WEAPONS, bossClear, out _); }
+                _forceActive = false;
+            });
+        }
 
         private void FillWeapon(EffectRequest request, ushort address, string weaponName, byte limit)
             => TryEffect(request,
