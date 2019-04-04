@@ -212,8 +212,6 @@ namespace CrowdControl.Games.Packs
         {
             if (!IsReady(request))
             {
-                Connector.Read8(0x00b1, out byte b);
-                Log.Message($"b1 is {b}");
                 DelayEffect(request, TimeSpan.FromSeconds(5));
                 return;
             }
