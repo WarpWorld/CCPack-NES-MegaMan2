@@ -312,9 +312,9 @@ namespace CrowdControl.Games.Packs
                 case "iframes":
                     RepeatAction(request, TimeSpan.FromSeconds(15),
                         () => Connector.IsZero8(ADDR_IFRAMES),
-                        () => Connector.SendMessage($"{request.DisplayViewer} deployed an invulnerability field."), TimeSpan.FromSeconds(0.5),
+                        () => Connector.Write8(ADDR_IFRAMES, 0xFF) && Connector.SendMessage($"{request.DisplayViewer} deployed an invulnerability field."), TimeSpan.FromSeconds(0.5),
                         () => true, TimeSpan.FromSeconds(5),
-                        () => Connector.Write8(ADDR_IFRAMES, 255), TimeSpan.FromSeconds(0.5), true)
+                        () => Connector.Write8(ADDR_IFRAMES, 0xFF), TimeSpan.FromSeconds(0.5), true)
                         .WhenCompleted.ContinueWith(t => Connector.SendMessage($"{request.DisplayViewer}'s invulnerability field has dispersed."));
                     return;
                 case "moonwalk":
