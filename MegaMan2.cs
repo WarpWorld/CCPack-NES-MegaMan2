@@ -222,7 +222,7 @@ namespace CrowdControl.Games.Packs
                 case "lock":
                     {
                         var wType = _wType[codeParams[1]];
-                        ForceWeapon(request, wType.value, (byte) wType.bossFlag, wType.light, wType.dark, wType.weapon);
+                        ForceWeapon(request, wType.value, (byte)wType.bossFlag, wType.light, wType.dark, wType.weapon);
                         return;
                     }
                 case "lives":
@@ -311,8 +311,8 @@ namespace CrowdControl.Games.Packs
                     return;
                 case "iframes":
                     RepeatAction(request, TimeSpan.FromSeconds(15),
-                        () => Connector.SendMessage($"{request.DisplayViewer} deployed an invulnerability field."),
-                        () => true, TimeSpan.FromSeconds(0.5),
+                        () => Connector.IsZero8(ADDR_IFRAMES),
+                        () => Connector.SendMessage($"{request.DisplayViewer} deployed an invulnerability field."), TimeSpan.FromSeconds(0.5),
                         () => true, TimeSpan.FromSeconds(5),
                         () => Connector.Write8(ADDR_IFRAMES, 255), TimeSpan.FromSeconds(0.5), true)
                         .WhenCompleted.ContinueWith(t => Connector.SendMessage($"{request.DisplayViewer}'s invulnerability field has dispersed."));
@@ -366,18 +366,18 @@ namespace CrowdControl.Games.Packs
                       Connector.Write8(ADDR_HERO_COLOR_LIGHT, (byte)lightColor) &&
                       Connector.Write8(ADDR_HERO_COLOR_DARK, (byte)darkColor),
                 TimeSpan.FromSeconds(1), true).WhenCompleted.Then(async t =>
-            {
-                while (!(Connector.Read8(ADDR_UNKNOWN1, out byte b) && (b != 0x0E)))
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(1));
-                    if (_quitting) { return; }
-                }
-                Connector.Write8(ADDR_HERO_COLOR_LIGHT, (byte)SuitColor.DefaultLight);
-                Connector.Write8(ADDR_HERO_COLOR_DARK, (byte)SuitColor.DefaultDark);
-                Connector.Write8(ADDR_POWER, 0x00);
-                if (!hadBefore) { Connector.UnsetBits(ADDR_WEAPONS, bossClear, out _); }
-                _forceActive = false;
-            });
+                    while (!(Connector.Read8(ADDR_UNKNOWN1, out byte b) && (b != 0x0E)))
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(1));
+                        if (_quitting) { return; }
+                    }
+                    Connector.Write8(ADDR_HERO_COLOR_LIGHT, (byte)SuitColor.DefaultLight);
+                    Connector.Write8(ADDR_HERO_COLOR_DARK, (byte)SuitColor.DefaultDark);
+                    Connector.Write8(ADDR_POWER, 0x00);
+                    if (!hadBefore) { Connector.UnsetBits(ADDR_WEAPONS, bossClear, out _); }
+                    _forceActive = false;
+                });
         }
 
         private void FillWeapon(EffectRequest request, ushort address, string weaponName, byte limit)
