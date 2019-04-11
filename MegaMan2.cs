@@ -453,7 +453,7 @@ namespace CrowdControl.Games.Packs
             }
         }
 
-        public override bool StopAllEffects() => Connector.Write8(0x8904, 0x29) && Connector.Write8(0xd3c8, 0x00);
+        public override bool StopAllEffects() => base.StopAllEffects() && Connector.Write8(0x8904, 0x29) && Connector.Write8(0xd3c8, 0x00);
 
         private void PlaySFX(SFXType type)
         {
