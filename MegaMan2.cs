@@ -222,7 +222,7 @@ namespace CrowdControl.Games.Packs
                 case "lock":
                     {
                         var wType = _wType[codeParams[1]];
-                        ForceWeapon(request, wType.value, (byte)wType.bossFlag, wType.light, wType.dark, wType.weapon);
+                        ForceWeapon(request, wType.value, (byte)wType.bossFlag, wType.light, wType.dark, wType.weapon, wType.address);
                         return;
                     }
                 case "lives":
@@ -343,15 +343,15 @@ namespace CrowdControl.Games.Packs
         }
 
         private volatile bool _forceActive = false;
-        private void ForceWeapon(EffectRequest request, byte wType, byte bossClear, SuitColor lightColor, SuitColor darkColor, string weaponName)
+        private void ForceWeapon(EffectRequest request, byte wType, byte bossClear, SuitColor lightColor, SuitColor darkColor, string weaponName, ushort weaponAddress)
         {
             bool hadBefore = false;
             RepeatAction(request, TimeSpan.FromSeconds(45),
                 () => {
                     if (_forceActive) { return false; }
-                    if (!(Connector.Read8(ADDR_UNKNOWN1, out byte b) && (b != 0x0E))) { return false; }
+                    if (!(Connector.Read8(ADDR_UNKNOWN1, out byte b) && (b == 0x0E))) { return false; }
                     bool result = Connector.Read8(ADDR_WEAPONS, out byte w);
-                    hadBefore = ((w & bossClear) != bossClear);
+                    hadBefore = ((w & bossClear) == bossClear);
                     return result;
                 },
                 () =>
@@ -361,13 +361,14 @@ namespace CrowdControl.Games.Packs
                     PlaySFX(SFXType.BusterShot);
                     return true;
                 }, TimeSpan.FromSeconds(5),
-                () => true, TimeSpan.FromSeconds(5),
+                () => (Connector.Read8(ADDR_UNKNOWN1, out byte b) && (b == 0x0E)), TimeSpan.FromSeconds(5),
                 () => Connector.Write8(ADDR_POWER, wType) &&
+                      Connector.Write8(weaponAddress, 28) &&
                       Connector.Write8(ADDR_HERO_COLOR_LIGHT, (byte)lightColor) &&
                       Connector.Write8(ADDR_HERO_COLOR_DARK, (byte)darkColor),
                 TimeSpan.FromSeconds(1), true).WhenCompleted.Then(async t =>
                 {
-                    while (!(Connector.Read8(ADDR_UNKNOWN1, out byte b) && (b != 0x0E)))
+                    while (!(Connector.Read8(ADDR_UNKNOWN1, out byte b) && (b == 0x0E)))
                     {
                         await Task.Delay(TimeSpan.FromSeconds(1));
                         if (_quitting) { return; }
