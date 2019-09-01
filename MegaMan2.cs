@@ -240,7 +240,8 @@ namespace CrowdControl.Games.Packs
                 case "kill":
                     TryEffect(request,
                         () => Connector.IsNonZero8(ADDR_HP),
-                        ()=>Connector.Write8(ADDR_HP, 0));
+                        () => Connector.Write8(ADDR_HP, 0),
+                        () => { Connector.SendMessage($"{request.DisplayViewer} killed you."); });
                     return;
                 case "lock":
                     {
