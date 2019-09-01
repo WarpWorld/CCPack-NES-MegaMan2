@@ -150,7 +150,9 @@ namespace CrowdControl.Games.Packs
                     //new Effect("Black Armor Mega Man", "barmor"),
                     new Effect("Grant Invulnerability (15 seconds)", "iframes"),
                     new Effect("Moonwalk (45 seconds)", "moonwalk"),
-                    new Effect("Magnet Floors (45 seconds)", "magfloors")
+                    new Effect("Magnet Floors (45 seconds)", "magfloors"),
+                    new Effect("One-Hit KO (15 seconds)", "ohko"),
+                    //new Effect("Kill Player", "kill")
                 };
 
                 effects.AddRange(_wType.Select(t => new Effect($"Force Weapon to {t.Value.weapon} (15 seconds)", $"lock_{t.Key}", "lockweapon")));
@@ -219,6 +221,27 @@ namespace CrowdControl.Games.Packs
             string[] codeParams = request.FinalCode.Split('_');
             switch (codeParams[0])
             {
+                case "ohko":
+                {
+                    byte origHP = 0;
+                    var s = RepeatAction(request, TimeSpan.FromSeconds(15),
+                        () => Connector.Read8(ADDR_HP, out origHP) && (origHP > 1),
+                        () => Connector.SendMessage($"{request.DisplayViewer} disabled your structural shielding."),
+                        TimeSpan.FromSeconds(1),
+                        () => Connector.IsNonZero8(ADDR_HP), TimeSpan.FromSeconds(1),
+                        () => Connector.Write8(ADDR_HP, 0x00), TimeSpan.FromSeconds(1), true, "health");
+                    s.WhenCompleted.Then(t =>
+                    {
+                        Connector.Write8(ADDR_HP, origHP);
+                        Connector.SendMessage("Your shielding has been restored.");
+                    });
+                    return;
+                }
+                case "kill":
+                    TryEffect(request,
+                        () => Connector.IsNonZero8(ADDR_HP),
+                        ()=>Connector.Write8(ADDR_HP, 0));
+                    return;
                 case "lock":
                     {
                         var wType = _wType[codeParams[1]];
