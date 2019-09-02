@@ -226,8 +226,7 @@ namespace CrowdControl.Games.Packs
                     byte origHP = 0;
                     var s = RepeatAction(request, TimeSpan.FromSeconds(15),
                         () => Connector.Read8(ADDR_HP, out origHP) && (origHP > 1),
-                        () => Connector.SendMessage($"{request.DisplayViewer} disabled your structural shielding."),
-                        TimeSpan.FromSeconds(1),
+                        () => Connector.SendMessage($"{request.DisplayViewer} disabled your structural shielding."), TimeSpan.FromSeconds(1),
                         () => Connector.IsNonZero8(ADDR_HP), TimeSpan.FromSeconds(1),
                         () => Connector.Write8(ADDR_HP, 0x00), TimeSpan.FromSeconds(1), true, "health");
                     s.WhenCompleted.Then(t =>
