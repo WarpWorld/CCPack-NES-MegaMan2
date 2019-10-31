@@ -473,7 +473,7 @@ namespace CrowdControl.Games.Packs
                         return true;
                     }
                 default:
-                    return false;
+                    return true;
             }
         }
 
