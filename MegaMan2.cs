@@ -10,10 +10,7 @@ namespace CrowdControl.Games.Packs
     [UsedImplicitly]
     public class MegaMan2 : NESEffectPack
     {
-        [NotNull]
-        private readonly IPlayer _player;
-
-        public MegaMan2([NotNull] IPlayer player, [NotNull] Func<CrowdControlBlock, bool> responseHandler, [NotNull] Action<object> statusUpdateHandler) : base(responseHandler, statusUpdateHandler) => _player = player;
+        public MegaMan2([NotNull] IPlayer player, [NotNull] Func<CrowdControlBlock, bool> responseHandler, [NotNull] Action<object> statusUpdateHandler) : base(player, responseHandler, statusUpdateHandler) { }
 
         private volatile bool _quitting = false;
         public override void Dispose()
