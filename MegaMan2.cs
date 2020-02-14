@@ -13,10 +13,10 @@ namespace CrowdControl.Games.Packs
         public MegaMan2([NotNull] IPlayer player, [NotNull] Func<CrowdControlBlock, bool> responseHandler, [NotNull] Action<object> statusUpdateHandler) : base(player, responseHandler, statusUpdateHandler) { }
 
         private volatile bool _quitting = false;
-        public override void Dispose()
+        protected override void Dispose(bool disposing)
         {
             _quitting = true;
-            base.Dispose();
+            base.Dispose(disposing);
         }
 
         private const ushort ADDR_AREA = 0x002A;
