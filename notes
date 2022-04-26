@@ -1,0 +1,4 @@
+0040 determines what kind of platform megaman is on. 01 and 02 is a conveyor belt, 80 is slipper
+0050 determines speed of converyo belt, needs to be 01 or higher for 0040 to work.
+
+cannot figure out direction
