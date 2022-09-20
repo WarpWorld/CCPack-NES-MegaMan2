@@ -51,6 +51,8 @@ namespace CrowdControl.Games.Packs
         private const ushort ADDR_HERO_COLOR_OUTLINE = 0x0367;
         private const ushort ADDR_HERO_COLOR_LIGHT = 0x0368;
         private const ushort ADDR_HERO_COLOR_DARK = 0x0369;
+		
+		private const ushort ADDR_GAMEPLAY_MODE = 0x1FE;
 
         private const ushort ADDR_UNKNOWN1 = 0x0069;//should be 0x0E
 
@@ -59,7 +61,7 @@ namespace CrowdControl.Games.Packs
             {"buster", ("Mega Buster", "Mega Man", 0, 0, SuitColor.DefaultLight, SuitColor.DefaultDark, 0, 0)},
             {"fire", ("Atomic Fire", "Heat Man", 1, BossDefeated.HeatMan, SuitColor.HLight, SuitColor.HDark, ADDR_ENERGY_HEAT, 14)},
             {"air", ("Air Shooter", "Air Man", 2, BossDefeated.AirMan, SuitColor.ALight, SuitColor.ADark, ADDR_ENERGY_AIR, 14)},
-            {"leaf", ("Leaf Shield", "Wood Man,", 3, BossDefeated.WoodMan, SuitColor.WLight, SuitColor.WDark, ADDR_ENERGY_WOOD, 14)},
+            {"leaf", ("Leaf Shield", "Wood Man", 3, BossDefeated.WoodMan, SuitColor.WLight, SuitColor.WDark, ADDR_ENERGY_WOOD, 14)},
             {"bubble", ("Bubble Lead", "Bubble Man", 4, BossDefeated.BubbleMan, SuitColor.BLight, SuitColor.BDark, ADDR_ENERGY_BUBBLE, 14)},
             {"quick", ("Quick Boomerang", "Quick Man", 5, BossDefeated.QuickMan, SuitColor.QLight, SuitColor.QDark, ADDR_ENERGY_QUICK, 14)},
             {"time", ("Time Stopper", "Flash Man", 6, BossDefeated.FlashMan, SuitColor.FLight, SuitColor.FDark, ADDR_ENERGY_FLASH, 14)},
@@ -141,18 +143,18 @@ namespace CrowdControl.Games.Packs
                     new Effect("Give E-Tanks", "etank"),
                     new Effect("Boss E-Tank", "bosshpfull"),
                     new Effect("Refill Health", "hpfull"),
-                    new Effect("Weapon Lock (45 seconds)", "lockweapon", ItemKind.Folder),
+                    new Effect("Weapon Lock", "lockweapon", ItemKind.Folder),
                     new Effect("Refill Weapon Energy", "refillweapon", ItemKind.Folder),
                     new Effect("Rebuild Robot Master", "reviveboss", ItemKind.Folder),
                     //new Effect("Black Armor Mega Man", "barmor"),
-                    new Effect("Grant Invulnerability (15 seconds)", "iframes"),
-                    new Effect("Moonwalk (45 seconds)", "moonwalk"),
-                    new Effect("Magnet Floors (45 seconds)", "magfloors"),
-                    new Effect("One-Hit KO (15 seconds)", "ohko"),
+                    new Effect("Grant Invulnerability", "iframes") { Duration = TimeSpan.FromSeconds(15) },
+                    new Effect("Moonwalk", "moonwalk") { Duration = TimeSpan.FromSeconds(45) },
+                    new Effect("Magnet Floors", "magfloors") { Duration = TimeSpan.FromSeconds(45) },
+                    new Effect("One-Hit KO", "ohko") { Duration = TimeSpan.FromSeconds(15) },
                     //new Effect("Kill Player", "kill")
                 };
 
-                effects.AddRange(_wType.Select(t => new Effect($"Force Weapon to {t.Value.weapon} (15 seconds)", $"lock_{t.Key}", "lockweapon")));
+                effects.AddRange(_wType.Select(t => new Effect($"Force Weapon to {t.Value.weapon}", $"lock_{t.Key}", "lockweapon") { Duration = TimeSpan.FromSeconds(45) } ));
                 effects.AddRange(_wType.Skip(1).Select(t => new Effect($"Refill {t.Value.weapon}", $"refill_{t.Key}", "refillweapon")));
                 effects.AddRange(_wType.Skip(1).Take(8).Select(t => new Effect($"Rebuild {t.Value.bossName}", $"revive_{t.Key}", "reviveboss")));
 
@@ -168,6 +170,7 @@ namespace CrowdControl.Games.Packs
         public override List<ROMInfo> ROMTable => new List<ROMInfo>(new[]
         {
             new ROMInfo("Mega Man 2", null, Patching.Ignore, ROMStatus.ValidPatched,s => Patching.MD5(s, "caaeb9ee3b52839de261fd16f93103e6")),
+			new ROMInfo("Mega Man 2", null, Patching.Ignore, ROMStatus.ValidPatched,s => Patching.MD5(s, "8e4bc5b03ffbd4ef91400e92e50dd294")),
             new ROMInfo("Rockman 2 - Dr. Wily no Nazo", null, Patching.Ignore, ROMStatus.ValidPatched,s => Patching.MD5(s, "055fb8dc626fb1fbadc0a193010a3e3f")),
             new ROMInfo("Mega Man 2 Randomizer", null, Patching.Ignore, ROMStatus.ValidPatched, s=>s.Length==262160)
         });
@@ -221,10 +224,10 @@ namespace CrowdControl.Games.Packs
                 case "ohko":
                 {
                     byte origHP = 0;
-                    var s = RepeatAction(request, TimeSpan.FromSeconds(15),
+                    var s = RepeatAction(request,
                         () => Connector.Read8(ADDR_HP, out origHP) && (origHP > 1),
                         () => Connector.SendMessage($"{request.DisplayViewer} disabled your structural shielding."), TimeSpan.FromSeconds(1),
-                        () => Connector.IsNonZero8(ADDR_HP), TimeSpan.FromSeconds(1),
+                        () => Connector.Read8(ADDR_GAMEPLAY_MODE, out byte mode) && mode == 0xB2, TimeSpan.FromSeconds(1),
                         () => Connector.Write8(ADDR_HP, 0x00), TimeSpan.FromSeconds(1), true, "health");
                     s.WhenCompleted.Then(t =>
                     {
@@ -257,7 +260,7 @@ namespace CrowdControl.Games.Packs
                             () => true,
                             () =>
                             {
-                                Connector.SendMessage($"{request.DisplayViewer} sent you {lives} lives.");
+                                Connector.SendMessage($"{request.DisplayViewer} sent you {lives} live(s).");
                                 PlaySFX(SFXType.Item);
                             });
                         return;
@@ -330,34 +333,40 @@ namespace CrowdControl.Games.Packs
                     PlaySFX(SFXType.HPIncrement);
                     return;
                 case "iframes":
-                    RepeatAction(request, TimeSpan.FromSeconds(15),
+					var iframes = RepeatAction(request,
                         () => Connector.IsZero8(ADDR_IFRAMES),
                         () => Connector.Write8(ADDR_IFRAMES, 0xFF) && Connector.SendMessage($"{request.DisplayViewer} deployed an invulnerability field."), TimeSpan.FromSeconds(0.5),
-                        () => true, TimeSpan.FromSeconds(5),
-                        () => Connector.Write8(ADDR_IFRAMES, 0xFF), TimeSpan.FromSeconds(0.5), true)
-                        .WhenCompleted.ContinueWith(t => Connector.SendMessage($"{request.DisplayViewer}'s invulnerability field has dispersed."));
-                    return;
+                        () => Connector.Read8(ADDR_GAMEPLAY_MODE, out byte mode) && mode == 0xB2, TimeSpan.FromSeconds(5),
+                        () => Connector.Write8(ADDR_IFRAMES, 0xFF), TimeSpan.FromSeconds(0.5), true);
+                    iframes.WhenCompleted.Then(t =>
+                    {
+                        Connector.Write8(ADDR_IFRAMES, 0x01);
+                        Connector.SendMessage($"{request.DisplayViewer}'s invulnerability field has dispersed.");
+                    });
+					return;
                 case "moonwalk":
-                    StartTimed(request,
+					var moonwalk = RepeatAction(request,
                         () => Connector.Read8(0x8904, out byte b) && (b != 0x49),
-                        () =>
-                        {
-                            bool result = Connector.Write8(0x8904, 0x49);
-                            if (result) { Connector.SendMessage($"{request.DisplayViewer} inverted your left/right."); }
-                            return result;
-                        },
-                        TimeSpan.FromSeconds(45));
+                        () => Connector.SendMessage("${request.DisplayViewer} inverted your left/right."), TimeSpan.FromSeconds(1),
+                        () => Connector.Read8(ADDR_GAMEPLAY_MODE, out byte mode) && mode == 0xB2, TimeSpan.FromSeconds(1),
+                        () => Connector.Write8(0x8904, 0x49), TimeSpan.FromSeconds(1), true);
+                    moonwalk.WhenCompleted.Then(t =>
+                    {
+                        Connector.Write8(0x8904, 0x29);
+                        Connector.SendMessage($"{request.DisplayViewer}'s control inversion has ended.");
+                    });
                     return;
                 case "magfloors":
-                    StartTimed(request,
+					var magfloors = RepeatAction(request,
                         () => Connector.Read8(0xd3c8, out byte b) && (b != 0x03),
-                        () =>
-                        {
-                            bool result = Connector.Write8(0xd3c8, 0x03);
-                            if (result) { Connector.SendMessage($"{request.DisplayViewer} has magnetized the floors."); }
-                            return result;
-                        },
-                        TimeSpan.FromSeconds(45));
+                        () => Connector.SendMessage($"{request.DisplayViewer} has magnetized the floors."), TimeSpan.FromSeconds(1),
+                        () => Connector.Read8(ADDR_GAMEPLAY_MODE, out byte mode) && mode == 0xB2, TimeSpan.FromSeconds(1),
+                        () => Connector.Write8(0xd3c8, 0x03), TimeSpan.FromSeconds(1), true);
+                    magfloors.WhenCompleted.Then(t =>
+                    {
+                        Connector.Write8(0xd3c8, 0x00);
+                        Connector.SendMessage($"{request.DisplayViewer}'s magnetic field has ended.");
+                    });
                     return;
             }
         }
@@ -366,7 +375,8 @@ namespace CrowdControl.Games.Packs
         private void ForceWeapon(EffectRequest request, byte wType, byte bossClear, SuitColor lightColor, SuitColor darkColor, string weaponName, ushort weaponAddress)
         {
             bool hadBefore = false;
-            RepeatAction(request, TimeSpan.FromSeconds(45),
+			
+            RepeatAction(request, 
                 () => {
                     if (_forceActive) { return false; }
                     if (!(Connector.Read8(ADDR_UNKNOWN1, out byte b) && (b == 0x0E))) { return false; }
@@ -381,7 +391,7 @@ namespace CrowdControl.Games.Packs
                     PlaySFX(SFXType.BusterShot);
                     return true;
                 }, TimeSpan.FromSeconds(5),
-                () => (Connector.Read8(ADDR_UNKNOWN1, out byte b) && (b == 0x0E)), TimeSpan.FromSeconds(5),
+                () => Connector.Read8(ADDR_GAMEPLAY_MODE, out byte mode) && mode == 0xB2 && (Connector.Read8(ADDR_UNKNOWN1, out byte b) && (b == 0x0E)), TimeSpan.FromSeconds(5),
                 () => Connector.Write8(ADDR_POWER, wType) &&
                       Connector.Write8(weaponAddress, 28) &&
                       Connector.Write8(ADDR_HERO_COLOR_LIGHT, (byte)lightColor) &&
@@ -447,23 +457,12 @@ namespace CrowdControl.Games.Packs
 
         protected override bool StopEffect(EffectRequest request)
         {
-            switch (request.InventoryItem.BaseItem.Code)
+			string [] codeParams = request.FinalCode.Split('_');
+			
+            switch (codeParams[0])
             {
-                case "moonwalk":
-                    {
-                        Connector.Write8(0x8904, 0x29);
-                        Connector.SendMessage($"{request.DisplayViewer}'s control inversion has ended.");
-                        return true;
-                    }
-                case "magfloors":
-                    {
-                        Connector.Write8(0xd3c8, 0x00);
-                        Connector.SendMessage($"{request.DisplayViewer}'s magnetic field has ended.");
-                        return true;
-                    }
                 case "revive":
                     {
-                        string[] codeParams = request.FinalCode.Split('_');
                         var wType = _wType[codeParams[1]];
                         Connector.SetBits(ADDR_WEAPONS, (byte)wType.bossFlag, out _);
                         Connector.SendMessage($"{wType.weapon} is back online.");
