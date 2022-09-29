@@ -20,6 +20,7 @@ namespace CrowdControl.Games.Packs
         }
 
         private const ushort ADDR_AREA = 0x002A;
+        private const ushort ADDR_MOVEMENT = 0x002C; //what movement MegaMan is doing 03 standing still
         private const ushort ADDR_PHYSICS = 0x003D;
         private const ushort ADDR_IFRAMES = 0x004B;
         private const ushort ADDR_WEAPONS = 0x009A;
@@ -37,7 +38,9 @@ namespace CrowdControl.Games.Packs
         private const ushort ADDR_ENERGY_ITEM3 = 0x00A6;
         private const ushort ADDR_ETANKS = 0x00A7;
         private const ushort ADDR_LIVES = 0x00A8;
-        private const ushort ADDR_POWER = 0x00A9;
+        private const ushort ADDR_POWER = 0x00A9; //0E is funny
+        private const ushort ADDR_FREEZE = 0x00AA; //freeze time
+        private const ushort ADDR_COLORS = 0x00F8; //default 1E, Gameboy 1F
         private const ushort ADDR_HP = 0x06C0;
         private const ushort ADDR_BOSS_HP = 0x06C1;
         private const ushort ADDR_ENEMY_HP = 0xD78E;
@@ -148,8 +151,11 @@ namespace CrowdControl.Games.Packs
                     new Effect("Rebuild Robot Master", "reviveboss", ItemKind.Folder),
                     //new Effect("Black Armor Mega Man", "barmor"),
                     new Effect("Grant Invulnerability", "iframes") { Duration = TimeSpan.FromSeconds(15) },
-                    new Effect("Moonwalk", "moonwalk") { Duration = TimeSpan.FromSeconds(45) },
-                    new Effect("Magnet Floors", "magfloors") { Duration = TimeSpan.FromSeconds(45) },
+                    new Effect("Freeze Time", "timefreeze") { Description = "Freezes the game like Quick Man does but you control it!", Duration = TimeSpan.FromSeconds(15) },
+                    new Effect("Can't stop Moving Man", "moveman") { Description = "Causes Mega Man to uncontrollably move in whatever direction he is looking.", Duration = TimeSpan.FromSeconds(15) },
+                    new Effect("Game Boy Mode", "gameboy") { Description = "Cause the game to look like it's on a Game Boy!", Duration = TimeSpan.FromSeconds(15) },
+                    new Effect("Moonwalk", "moonwalk") { Duration = TimeSpan.FromSeconds(30) },
+                    new Effect("Magnet Floors", "magfloors") { Duration = TimeSpan.FromSeconds(30) },
                     new Effect("One-Hit KO", "ohko") { Duration = TimeSpan.FromSeconds(15) },
                     //new Effect("Kill Player", "kill")
                 };
@@ -344,6 +350,48 @@ namespace CrowdControl.Games.Packs
                         Connector.SendMessage($"{request.DisplayViewer}'s invulnerability field has dispersed.");
                     });
 					return;
+                case "moveman":
+                {
+                    var moveman = RepeatAction(request,
+                        () => Connector.Read8(ADDR_MOVEMENT, out byte b) && (b == 0x03),
+                        () => Connector.Write8(ADDR_MOVEMENT, 0x05) && Connector.SendMessage($"{request.DisplayViewer} forced Mega Man to keep moving."), TimeSpan.FromSeconds(0.01),
+                        () => Connector.Read8(ADDR_GAMEPLAY_MODE, out byte mode) && mode == 0xB2, TimeSpan.FromSeconds(5),
+                        () => Connector.Write8(ADDR_MOVEMENT, 0x05), TimeSpan.FromSeconds(0.01), true);
+                    moveman.WhenCompleted.Then(t =>
+                    {
+                        Connector.Write8(ADDR_MOVEMENT, 0x03);
+                        Connector.SendMessage($"{request.DisplayViewer}'s movement effect has ended.");
+                    });
+                    return;
+                }   
+                case "gameboy":
+                {
+                    var gameboy = RepeatAction(request,
+                        () => Connector.Read8(ADDR_COLORS, out byte b) && (b == 0x1E),
+                        () => Connector.Write8(ADDR_COLORS, 0x1F) && Connector.SendMessage($"{request.DisplayViewer} enabled Game Boy mode."), TimeSpan.FromSeconds(0.5),
+                        () => Connector.Read8(ADDR_GAMEPLAY_MODE, out byte mode) && mode == 0xB2, TimeSpan.FromSeconds(5),
+                        () => Connector.Write8(ADDR_COLORS, 0x1F), TimeSpan.FromSeconds(0.5), true);
+                    gameboy.WhenCompleted.Then(t =>
+                    {
+                        Connector.Write8(ADDR_COLORS, 0x1E);
+                        Connector.SendMessage($"{request.DisplayViewer}'s Game Boy mode has ended.");
+                    });
+                    return;
+                }
+                case "timefreeze":
+                    {
+                    var timefreeze = RepeatAction(request,
+                        () => Connector.Read8(ADDR_FREEZE, out byte b) && (b == 0x00),
+                        () => Connector.Write8(ADDR_FREEZE, 0x01) && Connector.SendMessage($"{request.DisplayViewer} has frozen time."), TimeSpan.FromSeconds(0.01),
+                        () => Connector.Read8(ADDR_GAMEPLAY_MODE, out byte mode) && mode == 0xB2, TimeSpan.FromSeconds(5),
+                        () => Connector.Write8(ADDR_FREEZE, 0x01), TimeSpan.FromSeconds(0.01), true);
+                    timefreeze.WhenCompleted.Then(t =>
+                    {
+                        Connector.Write8(ADDR_FREEZE, 0x00);
+                        Connector.SendMessage($"{request.DisplayViewer}'s time freeze hasended.");
+                    });
+                    return;
+                    }
                 case "moonwalk":
 					var moonwalk = RepeatAction(request,
                         () => Connector.Read8(0x8904, out byte b) && (b != 0x49),
