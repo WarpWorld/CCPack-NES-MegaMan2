@@ -176,13 +176,13 @@ namespace CrowdControl.Games.Packs
             new Common.ItemType("Quantity", "quantity9", Common.ItemType.Subtype.Slider, "{\"min\":1,\"max\":9}")
         });
 
-        public override List<ROMInfo> ROMTable => new List<ROMInfo>(new[]
+        public override ROMTable ROMTable => new[]
         {
             new ROMInfo("Mega Man 2", null, Patching.Ignore, ROMStatus.ValidPatched,s => Patching.MD5(s, "caaeb9ee3b52839de261fd16f93103e6")),
 			new ROMInfo("Mega Man 2", null, Patching.Ignore, ROMStatus.ValidPatched,s => Patching.MD5(s, "8e4bc5b03ffbd4ef91400e92e50dd294")),
             new ROMInfo("Rockman 2 - Dr. Wily no Nazo", null, Patching.Ignore, ROMStatus.ValidPatched,s => Patching.MD5(s, "055fb8dc626fb1fbadc0a193010a3e3f")),
             new ROMInfo("Mega Man 2 Randomizer", null, Patching.Ignore, ROMStatus.ValidPatched, s=>s.Length==262160)
-        });
+        };
 
         private enum SFXType : byte
         {
