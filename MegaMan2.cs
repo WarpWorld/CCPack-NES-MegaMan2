@@ -13,7 +13,7 @@ namespace CrowdControl.Games.Packs
     [SuppressMessage("ReSharper", "CommentTypo")]
     public class MegaMan2 : NESEffectPack
     {
-        public MegaMan2(IPlayer player, Func<CrowdControlBlock, bool> responseHandler, Action<object> statusUpdateHandler) : base(player, responseHandler, statusUpdateHandler) { }
+        public MegaMan2(Player player, Func<CrowdControlBlock, bool> responseHandler, Action<object> statusUpdateHandler) : base(player, responseHandler, statusUpdateHandler) { }
 
         private volatile bool _quitting;
         protected override void Dispose(bool disposing)
@@ -139,19 +139,16 @@ namespace CrowdControl.Games.Packs
             Item3 = 0x04
         }
 
-        public override List<Effect> Effects
+        public override EffectList Effects
         {
             get
             {
                 List<Effect> effects = new List<Effect>
                 {
-                    new("Give Lives", "lives", new[] {"quantity9"}),
+                    new("Give Lives", "lives") { Quantity = 9 },
                     new("Give E-Tanks", "etank"),
                     new("Boss E-Tank", "bosshpfull"),
                     new("Refill Health", "hpfull"),
-                    new("Weapon Lock", "lockweapon", ItemKind.Folder),
-                    new("Refill Weapon Energy", "refillweapon", ItemKind.Folder),
-                    new("Rebuild Robot Master", "reviveboss", ItemKind.Folder),
                     //new("Black Armor Mega Man", "barmor"),
                     new("Grant Invulnerability", "iframes") { Duration = TimeSpan.FromSeconds(15) },
                     new("Freeze Time", "timefreeze") { Description = "Freezes the game like Quick Man does but you control it!", Duration = TimeSpan.FromSeconds(15) },
@@ -163,18 +160,13 @@ namespace CrowdControl.Games.Packs
                     //new("Kill Player", "kill")
                 };
 
-                effects.AddRange(_wType.Select(t => new Effect($"Force Weapon to {t.Value.weapon}", $"lock_{t.Key}", "lockweapon") { Duration = TimeSpan.FromSeconds(45) } ));
-                effects.AddRange(_wType.Skip(1).Select(t => new Effect($"Refill {t.Value.weapon}", $"refill_{t.Key}", "refillweapon")));
-                effects.AddRange(_wType.Skip(1).Take(8).Select(t => new Effect($"Rebuild {t.Value.bossName}", $"revive_{t.Key}", "reviveboss")));
+                effects.AddRange(_wType.Select(t => new Effect($"Force Weapon to {t.Value.weapon}", $"lock_{t.Key}") { Duration = TimeSpan.FromSeconds(45), Category = "Lock Weapons" } ));
+                effects.AddRange(_wType.Skip(1).Select(t => new Effect($"Refill {t.Value.weapon}", $"refill_{t.Key}") { Category = "Refill Weapons" }));
+                effects.AddRange(_wType.Skip(1).Take(8).Select(t => new Effect($"Rebuild {t.Value.bossName}", $"revive_{t.Key}") { Category = "Revive Bosses" }));
 
                 return effects;
             }
         }
-
-        public override List<Common.ItemType> ItemTypes => new List<Common.ItemType>(new[]
-        {
-            new Common.ItemType("Quantity", "quantity9", Common.ItemType.Subtype.Slider, "{\"min\":1,\"max\":9}")
-        });
 
         public override ROMTable ROMTable => new[]
         {
@@ -227,7 +219,7 @@ namespace CrowdControl.Games.Packs
                 return;
             }
 
-            string[] codeParams = request.FinalCode.Split('_');
+            string[] codeParams = FinalCode(request).Split('_');
             switch (codeParams[0])
             {
                 case "ohko":
@@ -508,7 +500,7 @@ namespace CrowdControl.Games.Packs
 
         protected override bool StopEffect(EffectRequest request)
         {
-			string [] codeParams = request.FinalCode.Split('_');
+			string [] codeParams = FinalCode(request).Split('_');
 			
             switch (codeParams[0])
             {
