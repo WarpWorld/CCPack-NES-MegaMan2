@@ -13,7 +13,7 @@ namespace CrowdControl.Games.Packs
     [SuppressMessage("ReSharper", "CommentTypo")]
     public class MegaMan2 : NESEffectPack
     {
-        public MegaMan2(Player player, Func<CrowdControlBlock, bool> responseHandler, Action<object> statusUpdateHandler) : base(player, responseHandler, statusUpdateHandler) { }
+        public MegaMan2(UserRecord player, Func<CrowdControlBlock, bool> responseHandler, Action<object> statusUpdateHandler) : base(player, responseHandler, statusUpdateHandler) { }
 
         private volatile bool _quitting;
         protected override void Dispose(bool disposing)
