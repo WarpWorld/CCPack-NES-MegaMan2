@@ -168,13 +168,23 @@ public class MegaMan2 : NESEffectPack
         }
     }
 
-    public override ROMTable ROMTable => new[]
+    public override ROMTable ROMTable
     {
-        new ROMInfo("Mega Man 2", null, Patching.Ignore, ROMStatus.ValidPatched,s => Patching.MD5(s, "caaeb9ee3b52839de261fd16f93103e6")),
-        new ROMInfo("Mega Man 2", null, Patching.Ignore, ROMStatus.ValidPatched,s => Patching.MD5(s, "8e4bc5b03ffbd4ef91400e92e50dd294")),
-        new ROMInfo("Rockman 2 - Dr. Wily no Nazo", null, Patching.Ignore, ROMStatus.ValidPatched,s => Patching.MD5(s, "055fb8dc626fb1fbadc0a193010a3e3f")),
-        new ROMInfo("Mega Man 2 Randomizer", null, Patching.Ignore, ROMStatus.ValidPatched, s=>s.Length==262160)
-    };
+        get
+        {
+            return new[]
+            {
+                new ROMInfo("Mega Man 2", null, Patching.Ignore, ROMStatus.ValidPatched,
+                    s => Patching.MD5(s, "caaeb9ee3b52839de261fd16f93103e6")),
+                new ROMInfo("Mega Man 2", null, Patching.Ignore, ROMStatus.ValidPatched,
+                    s => Patching.MD5(s, "8e4bc5b03ffbd4ef91400e92e50dd294")),
+                new ROMInfo("Rockman 2 - Dr. Wily no Nazo", null, Patching.Ignore, ROMStatus.ValidPatched,
+                    s => Patching.MD5(s, "055fb8dc626fb1fbadc0a193010a3e3f")),
+                new ROMInfo("Mega Man 2 Randomizer", null, Patching.Ignore, ROMStatus.ValidPatched,
+                    s => s.Length == 262160)
+            };
+        }
+    }
 
     private enum SFXType : byte
     {
@@ -203,13 +213,22 @@ public class MegaMan2 : NESEffectPack
         Doors2 = 0xFE
     }
 
-    public override List<(string, Action)> MenuActions => new List<(string, Action)>();
+    public override List<(string, Action)> MenuActions
+    {
+        get { return new List<(string, Action)>(); }
+    }
 
     public override Game Game { get; } = new Game(11, "Mega Man 2", "MegaMan2", "NES", ConnectorType.NESConnector);
 
-    protected override bool IsReady(EffectRequest request) => Connector.Read8(0x00b1, out byte b) && (b < 0x80);
+    protected override bool IsReady(EffectRequest request)
+    {
+        return Connector.Read8(0x00b1, out byte b) && (b < 0x80);
+    }
 
-    protected override void RequestData(DataRequest request) => Respond(request, request.Key, null, false, $"Variable name \"{request.Key}\" not known");
+    protected override void RequestData(DataRequest request)
+    {
+        Respond(request, request.Key, null, false, $"Variable name \"{request.Key}\" not known");
+    }
 
     protected override void StartEffect(EffectRequest request)
     {
@@ -455,7 +474,8 @@ public class MegaMan2 : NESEffectPack
     }
 
     private void FillWeapon(EffectRequest request, ushort address, string weaponName, byte limit)
-        => TryEffect(request,
+    {
+        TryEffect(request,
             () => Connector.Read8(address, out byte b) && (b < limit),
             () => Connector.Write8(address, 28),
             () =>
@@ -463,6 +483,7 @@ public class MegaMan2 : NESEffectPack
                 Connector.SendMessage($"{request.DisplayViewer} filled your {weaponName} power.");
                 PlaySFX(SFXType.HPIncrement);
             });
+    }
 
     private void ReviveBoss(EffectRequest request, ushort address, byte bossDefeated, string bossName)
     {
@@ -479,7 +500,8 @@ public class MegaMan2 : NESEffectPack
     }
 
     private void DisableWeapon(EffectRequest request, ushort address, BossDefeated bossDefeated, string weaponName)
-        => StartTimed(request,
+    {
+        StartTimed(request,
             () => Connector.Read8(address, out byte b) && ((b & (byte)bossDefeated) == (byte)bossDefeated),
             () =>
             {
@@ -489,8 +511,10 @@ public class MegaMan2 : NESEffectPack
                     Connector.SendMessage($"{request.DisplayViewer} disabled your {weaponName}.");
                     PlaySFX(SFXType.HPIncrement);
                 }
+
                 return result;
             });
+    }
 
     private string TryGetBossName()
     {
@@ -516,7 +540,17 @@ public class MegaMan2 : NESEffectPack
         }
     }
 
-    public override bool StopAllEffects() => base.StopAllEffects() && Connector.Write8(0x8904, 0x29) && Connector.Write8(0xd3c8, 0x00);
+    public override bool StopAllEffects()
+    {
+        bool success = base.StopAllEffects();
+        try
+        {
+            success &= Connector.Write8(0x8904, 0x29);
+            success &= Connector.Write8(0xd3c8, 0x00);
+        }
+        catch { success = false; }
+        return success;
+    }
 
     private void PlaySFX(SFXType type)
     {
