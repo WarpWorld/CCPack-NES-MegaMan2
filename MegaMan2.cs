@@ -174,14 +174,10 @@ public class MegaMan2 : NESEffectPack
         {
             return new[]
             {
-                new ROMInfo("Mega Man 2", null, Patching.Ignore, ROMStatus.ValidPatched,
-                    s => Patching.MD5(s, "caaeb9ee3b52839de261fd16f93103e6")),
-                new ROMInfo("Mega Man 2", null, Patching.Ignore, ROMStatus.ValidPatched,
-                    s => Patching.MD5(s, "8e4bc5b03ffbd4ef91400e92e50dd294")),
-                new ROMInfo("Rockman 2 - Dr. Wily no Nazo", null, Patching.Ignore, ROMStatus.ValidPatched,
-                    s => Patching.MD5(s, "055fb8dc626fb1fbadc0a193010a3e3f")),
-                new ROMInfo("Mega Man 2 Randomizer", null, Patching.Ignore, ROMStatus.ValidPatched,
-                    s => s.Length == 262160)
+                new ROMInfo("Mega Man 2", null, Patching.Ignore, ROMStatus.ValidPatched, s => Patching.MD5(s, "caaeb9ee3b52839de261fd16f93103e6")),
+                new ROMInfo("Mega Man 2", null, Patching.Ignore, ROMStatus.ValidPatched, s => Patching.MD5(s, "8e4bc5b03ffbd4ef91400e92e50dd294")),
+                new ROMInfo("Rockman 2 - Dr. Wily no Nazo", null, Patching.Ignore, ROMStatus.ValidPatched, s => Patching.MD5(s, "055fb8dc626fb1fbadc0a193010a3e3f")),
+                new ROMInfo("Mega Man 2 Randomizer", null, Patching.Ignore, ROMStatus.ValidPatched, s => s.Length == 262160)
             };
         }
     }
@@ -213,17 +209,10 @@ public class MegaMan2 : NESEffectPack
         Doors2 = 0xFE
     }
 
-    public override List<(string, Action)> MenuActions
-    {
-        get { return new List<(string, Action)>(); }
-    }
-
-    public override Game Game { get; } = new Game(11, "Mega Man 2", "MegaMan2", "NES", ConnectorType.NESConnector);
+    public override Game Game { get; } = new("Mega Man 2", "MegaMan2", "NES", ConnectorType.NESConnector);
 
     protected override bool IsReady(EffectRequest request)
-    {
-        return Connector.Read8(0x00b1, out byte b) && (b < 0x80);
-    }
+        => Connector.Read8(0x00b1, out byte b) && (b < 0x80);
 
     protected override void RequestData(DataRequest request)
     {
