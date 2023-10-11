@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using CrowdControl.Common;
 using JetBrains.Annotations;
 
-namespace CrowdControl.Games.Packs;
+namespace CrowdControl.Games.Packs.MegaMan2;
 
 [UsedImplicitly]
 [SuppressMessage("ReSharper", "StringLiteralTypo")]
