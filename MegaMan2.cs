@@ -517,13 +517,13 @@ public class MegaMan2 : NESEffectPack
 			
         switch (codeParams[0])
         {
-            case "revive":
+            /*case "revive":
             {
                 var wType = _wType[codeParams[1]];
-                Connector.SetBits(ADDR_WEAPONS, (byte)wType.bossFlag, out _);
-                Connector.SendMessage($"{wType.weapon} is back online.");
-                return true;
-            }
+                bool result = Connector.SetBits(ADDR_WEAPONS, (byte)wType.bossFlag, out _);
+                if (result) Connector.SendMessage($"{wType.weapon} is back online.");
+                return result;
+            }*/
             default:
                 return true;
         }
@@ -541,9 +541,7 @@ public class MegaMan2 : NESEffectPack
         return success;
     }
 
-    private void PlaySFX(SFXType type)
-    {
-        Connector.Write8(ADDR_SFX, (byte)type);
+    private bool PlaySFX(SFXType type) =>
+        Connector.Write8(ADDR_SFX, (byte)type) &&
         Connector.Write8(ADDR_SFX_ENABLE, 1);
-    }
 }
