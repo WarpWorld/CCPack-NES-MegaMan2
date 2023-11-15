@@ -223,7 +223,7 @@ public class MegaMan2 : NESEffectPack
     {
         if (!IsReady(request))
         {
-            DelayEffect(request, TimeSpan.FromSeconds(5));
+            DelayEffect(request);
             return;
         }
 
@@ -301,9 +301,9 @@ public class MegaMan2 : NESEffectPack
                     DelayEffect(request);
                     return;
                 }
-                if ((area == 0x09) || (area == 0x0B))
+                if (area is 0x09 or 0x0B)
                 {
-                    DelayEffect(request, TimeSpan.FromSeconds(30));
+                    Respond(request, EffectStatus.FailTemporary, "Not in a boss area.");
                     return;
                 }
                 TryEffect(request,
