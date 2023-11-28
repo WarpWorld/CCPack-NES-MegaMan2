@@ -419,6 +419,9 @@ public class MegaMan2 : NESEffectPack
                     Connector.SendMessage($"{request.DisplayViewer}'s magnetic field has ended.");
                 });
                 return;
+            default:
+                Respond(request, EffectStatus.FailPermanent, "Unknown effect ID: " + codeParams[0]);
+                return;
         }
     }
 
