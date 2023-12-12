@@ -212,11 +212,9 @@ public class MegaMan2 : NESEffectPack
     public override Game Game { get; } = new("Mega Man 2", "MegaMan2", "NES", ConnectorType.NESConnector);
 
     protected override bool IsReady(EffectRequest request)
-        => Connector.Read8(0x00b1, out byte b) && (b < 0x80);
-
-    protected override void RequestData(DataRequest request)
     {
-        Respond(request, request.Key, null, false, $"Variable name \"{request.Key}\" not known");
+        bool result = Connector.Read8(0x00b1, out byte b) && (b < 0x80);
+        return result;
     }
 
     protected override void StartEffect(EffectRequest request)
@@ -301,7 +299,7 @@ public class MegaMan2 : NESEffectPack
                     DelayEffect(request);
                     return;
                 }
-                if (area is 0x09 or 0x0B)
+                if (area is 0x09 or 0x0B) //wily tower?
                 {
                     Respond(request, EffectStatus.FailTemporary, "Not in a boss area.");
                     return;
