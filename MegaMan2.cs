@@ -1,8 +1,4 @@
-using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Threading.Tasks;
 using CrowdControl.Common;
 using JetBrains.Annotations;
 
@@ -143,22 +139,33 @@ public class MegaMan2 : NESEffectPack
     {
         get
         {
-            List<Effect> effects = new List<Effect>
-            {
+            List<Effect> effects =
+            [
                 new("Give Lives", "lives") { Quantity = 9 },
                 new("Give E-Tanks", "etank"),
                 new("Boss E-Tank", "bosshpfull"),
                 new("Refill Health", "hpfull"),
                 //new("Black Armor Mega Man", "barmor"),
                 new("Grant Invulnerability", "iframes") { Duration = TimeSpan.FromSeconds(15) },
-                new("Freeze Time", "timefreeze") { Description = "Freezes the game like Quick Man does but you control it!", Duration = TimeSpan.FromSeconds(15) },
-                new("Can't stop Moving Man", "moveman") { Description = "Causes Mega Man to uncontrollably move in whatever direction he is looking.", Duration = TimeSpan.FromSeconds(15) },
-                new("Game Boy Mode", "gameboy") { Description = "Cause the game to look like it's on a Game Boy!", Duration = TimeSpan.FromSeconds(15) },
+                new("Freeze Time", "timefreeze")
+                {
+                    Description = "Freezes the game like Quick Man does but you control it!",
+                    Duration = TimeSpan.FromSeconds(15)
+                },
+                new("Can't stop Moving Man", "moveman")
+                {
+                    Description = "Causes Mega Man to uncontrollably move in whatever direction he is looking.",
+                    Duration = TimeSpan.FromSeconds(15)
+                },
+                new("Game Boy Mode", "gameboy")
+                {
+                    Description = "Cause the game to look like it's on a Game Boy!", Duration = TimeSpan.FromSeconds(15)
+                },
                 new("Moonwalk", "moonwalk") { Duration = TimeSpan.FromSeconds(30) },
                 new("Magnet Floors", "magfloors") { Duration = TimeSpan.FromSeconds(30) },
-                new("One-Hit KO", "ohko") { Duration = TimeSpan.FromSeconds(15) },
+                new("One-Hit KO", "ohko") { Duration = TimeSpan.FromSeconds(15) }
                 //new("Kill Player", "kill")
-            };
+            ];
 
             effects.AddRange(_wType.Select(t => new Effect($"Force Weapon to {t.Value.weapon}", $"lock_{t.Key}") { Duration = TimeSpan.FromSeconds(45), Category = "Lock Weapons" } ));
             effects.AddRange(_wType.Skip(1).Select(t => new Effect($"Refill {t.Value.weapon}", $"refill_{t.Key}") { Category = "Refill Weapons" }));
