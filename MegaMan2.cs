@@ -519,24 +519,6 @@ public class MegaMan2 : NESEffectPack
         catch { return "the boss"; }
     }
 
-    protected override bool StopEffect(EffectRequest request)
-    {
-        string [] codeParams = FinalCode(request).Split('_');
-			
-        switch (codeParams[0])
-        {
-            /*case "revive":
-            {
-                var wType = _wType[codeParams[1]];
-                bool result = Connector.SetBits(ADDR_WEAPONS, (byte)wType.bossFlag, out _);
-                if (result) Connector.SendMessage($"{wType.weapon} is back online.");
-                return result;
-            }*/
-            default:
-                return true;
-        }
-    }
-
     public override bool StopAllEffects()
     {
         bool success = base.StopAllEffects();
