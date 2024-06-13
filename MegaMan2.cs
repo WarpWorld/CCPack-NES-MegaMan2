@@ -425,7 +425,7 @@ public class MegaMan2 : NESEffectPack
                 });
                 return;
             default:
-                Respond(request, EffectStatus.FailPermanent, "Unknown effect ID: " + codeParams[0]);
+                Respond(request, EffectStatus.FailPermanent, StandardErrors.UnknownEffect(request));
                 return;
         }
     }
