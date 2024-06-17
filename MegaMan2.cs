@@ -226,12 +226,6 @@ public class MegaMan2 : NESEffectPack
 
     protected override void StartEffect(EffectRequest request)
     {
-        if (!IsReady(request))
-        {
-            DelayEffect(request);
-            return;
-        }
-
         string[] codeParams = FinalCode(request).Split('_');
         switch (codeParams[0])
         {
