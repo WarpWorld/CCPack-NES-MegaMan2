@@ -303,7 +303,7 @@ public class MegaMan2 : NESEffectPack
             {
                 if (!Connector.Read8(ADDR_AREA, out byte area))
                 {
-                    DelayEffect(request);
+                    DelayEffect(request, StandardErrors.ConnectorReadFailure);
                     return;
                 }
                 if (area is 0x09 or 0x0B) //wily tower?
@@ -332,7 +332,7 @@ public class MegaMan2 : NESEffectPack
                 var wType = _wType[codeParams[1]];
                 if (!Connector.Read8(ADDR_AREA, out byte b))
                 {
-                    DelayEffect(request);
+                    DelayEffect(request, StandardErrors.ConnectorReadFailure);
                     return;
                 }
                 if (b < 8) { ReviveBoss(request, ADDR_WEAPONS, (byte)wType.bossFlag, wType.bossName); }
