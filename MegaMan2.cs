@@ -218,10 +218,11 @@ public class MegaMan2 : NESEffectPack
 
     public override Game Game { get; } = new("Mega Man 2", "MegaMan2", "NES", ConnectorType.NESConnector);
 
-    protected override bool IsReady(EffectRequest? request)
+    protected override GameState GetGameState()
     {
-        bool result = Connector.Read8(0x00b1, out byte b) && (b < 0x80);
-        return result;
+        if (!Connector.Read8(0x00b1, out byte b)) return GameState.Unknown;
+        if (b >= 0x80) return GameState.WrongMode;
+        return GameState.Ready;
     }
 
     protected override void StartEffect(EffectRequest request)
