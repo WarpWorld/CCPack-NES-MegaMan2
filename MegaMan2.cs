@@ -217,6 +217,32 @@ public class MegaMan2 : NESEffectPack
     }
 
     public override Game Game { get; } = new("Mega Man 2", "MegaMan2", "NES", ConnectorType.NESConnector);
+    
+    public override List<string> MetadataCommon { get; } = ["lives", "health", "location"];
+
+    protected override async Task<DataResponse> RequestData(string key)
+    {
+        switch (key)
+        {
+            case "lives":
+            {
+                if (!Connector.Read8(ADDR_LIVES, out byte lives)) return DataResponse.DelayEstimated(key);
+                return DataResponse.Success(key, lives);
+            }
+            case "health":
+            {
+                if (!Connector.Read8(ADDR_HP, out byte hp)) return DataResponse.DelayEstimated(key);
+                return DataResponse.Success(key, hp);
+            }
+            case "location":
+            {
+                if (!Connector.Read8(ADDR_AREA, out byte level)) return DataResponse.DelayEstimated(key);
+                return DataResponse.Success(key, new { level });
+            }
+            default:
+                return await base.RequestData(key);
+        }
+    }
 
     protected override GameState GetGameState()
     {
