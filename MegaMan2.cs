@@ -287,7 +287,7 @@ public class MegaMan2 : NESEffectPack
             {
                 if (!byte.TryParse(codeParams[1], out byte lives))
                 {
-                    Respond(request, EffectStatus.FailTemporary, "Invalid life quantity.");
+                    Respond(request, EffectStatus.FailTemporary, StandardErrors.CannotParseNumber, codeParams[1]);
                     return;
                 }
                 TryEffect(request,
@@ -329,7 +329,7 @@ public class MegaMan2 : NESEffectPack
                 }
                 if (area is 0x09 or 0x0B) //wily tower?
                 {
-                    Respond(request, EffectStatus.FailTemporary, "Not in a boss area.");
+                    Respond(request, EffectStatus.FailTemporary, StandardErrors.NoValidTargets, "boss");
                     return;
                 }
                 TryEffect(request,
