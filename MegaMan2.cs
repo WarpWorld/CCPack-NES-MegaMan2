@@ -1,6 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
+using ConnectorLib;
 using CrowdControl.Common;
 using JetBrains.Annotations;
+using ConnectorType = CrowdControl.Common.ConnectorType;
 
 namespace CrowdControl.Games.Packs.MegaMan2;
 
