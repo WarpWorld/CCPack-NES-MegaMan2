@@ -1,8 +1,10 @@
+using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Threading.Tasks;
 using ConnectorLib;
 using CrowdControl.Common;
 using JetBrains.Annotations;
-using ConnectorType = CrowdControl.Common.ConnectorType;
 
 namespace CrowdControl.Games.Packs.MegaMan2;
 
@@ -21,7 +23,7 @@ public class MegaMan2 : NESEffectPack
     }
 
     private const ushort ADDR_AREA = 0x002A;
-    private const ushort ADDR_MOVEMENT = 0x002C; //what movement MegaMan is doing 03 standing still
+    private const ushort ADDR_MOVEMENT = 0x002C; // what movement MegaMan is doing 03 standing still
     private const ushort ADDR_PHYSICS = 0x003D;
     private const ushort ADDR_IFRAMES = 0x004B;
     private const ushort ADDR_WEAPONS = 0x009A;
@@ -39,16 +41,15 @@ public class MegaMan2 : NESEffectPack
     private const ushort ADDR_ENERGY_ITEM3 = 0x00A6;
     private const ushort ADDR_ETANKS = 0x00A7;
     private const ushort ADDR_LIVES = 0x00A8;
-    private const ushort ADDR_POWER = 0x00A9; //0E is funny
-    private const ushort ADDR_FREEZE = 0x00AA; //freeze time
-    private const ushort ADDR_COLORS = 0x00F8; //default 1E, Gameboy 1F
+    private const ushort ADDR_POWER = 0x00A9; // 0E is funny
+    private const ushort ADDR_FREEZE = 0x00AA; // freeze time
+    private const ushort ADDR_COLORS = 0x00F8; // default 1E, Gameboy 1F
     private const ushort ADDR_HP = 0x06C0;
     private const ushort ADDR_BOSS_HP = 0x06C1;
     private const ushort ADDR_ENEMY_HP = 0xD78E;
     private const ushort ADDR_SFX = 0x0580;
     private const ushort ADDR_SFX_ENABLE = 0x0066;
     private const ushort ADDR_FLIP_PLAYER = 0x8904;
-    private const ushort ADDR_JUMP_HEIGHT = 0x003C;
     private const ushort ADDR_PALETTE1 = 0x0356;
     private const ushort ADDR_PALETTE2 = 0x0357;
     private const ushort ADDR_PALETTE3 = 0x0358;
@@ -58,7 +59,7 @@ public class MegaMan2 : NESEffectPack
 		
     private const ushort ADDR_GAMEPLAY_MODE = 0x1FE;
 
-    private const ushort ADDR_UNKNOWN1 = 0x0069;//should be 0x0E
+    private const ushort ADDR_UNKNOWN1 = 0x0069; // should be 0x0E
 
     private static readonly Dictionary<string, (string weapon, string bossName, byte value, BossDefeated bossFlag, SuitColor light, SuitColor dark, ushort address, byte limit)> _wType = new(StringComparer.InvariantCultureIgnoreCase)
     {
@@ -71,9 +72,9 @@ public class MegaMan2 : NESEffectPack
         {"time", ("Time Stopper", "Flash Man", 6, BossDefeated.FlashMan, SuitColor.FLight, SuitColor.FDark, ADDR_ENERGY_FLASH, 14)},
         {"metal", ("Metal Blade", "Metal Man", 7, BossDefeated.MetalMan, SuitColor.MLight, SuitColor.MDark, ADDR_ENERGY_METAL, 14)},
         {"crash", ("Crash Bomber", "Crash Man", 8, BossDefeated.CrashMan, SuitColor.CLight, SuitColor.CDark, ADDR_ENERGY_CRASH, 14)},
-        {"item1", ("Item 1", "Heat Man", 9,BossDefeated.HeatMan, SuitColor.ItemLight, SuitColor.ItemDark, ADDR_ENERGY_ITEM1, 14)},
-        {"item2", ("Item 2", "Air Man", 10,BossDefeated.AirMan, SuitColor.ItemLight, SuitColor.ItemDark, ADDR_ENERGY_ITEM2, 14)},
-        {"item3", ("Item 3", "Flash Man", 11,BossDefeated.FlashMan, SuitColor.ItemLight, SuitColor.ItemDark, ADDR_ENERGY_ITEM3, 14)}
+        {"item1", ("Item 1", "Heat Man", 9, BossDefeated.HeatMan, SuitColor.ItemLight, SuitColor.ItemDark, ADDR_ENERGY_ITEM1, 14)},
+        {"item2", ("Item 2", "Air Man", 10, BossDefeated.AirMan, SuitColor.ItemLight, SuitColor.ItemDark, ADDR_ENERGY_ITEM2, 14)},
+        {"item3", ("Item 3", "Flash Man", 11, BossDefeated.FlashMan, SuitColor.ItemLight, SuitColor.ItemDark, ADDR_ENERGY_ITEM3, 14)}
     };
 
     private static readonly Dictionary<byte, string> _aInfo = new()
@@ -137,60 +138,6 @@ public class MegaMan2 : NESEffectPack
         Item3 = 0x04
     }
 
-    public override EffectList Effects
-    {
-        get
-        {
-            List<Effect> effects =
-            [
-                new("Give Lives", "lives") { Quantity = 9 },
-                new("Give E-Tanks", "etank"),
-                new("Boss E-Tank", "bosshpfull"),
-                new("Refill Health", "hpfull"),
-                //new("Black Armor Mega Man", "barmor"),
-                new("Grant Invulnerability", "iframes") { Duration = TimeSpan.FromSeconds(15) },
-                new("Freeze Time", "timefreeze")
-                {
-                    Description = "Freezes the game like Quick Man does but you control it!",
-                    Duration = TimeSpan.FromSeconds(15)
-                },
-                new("Can't stop Moving Man", "moveman")
-                {
-                    Description = "Causes Mega Man to uncontrollably move in whatever direction he is looking.",
-                    Duration = TimeSpan.FromSeconds(15)
-                },
-                new("Game Boy Mode", "gameboy")
-                {
-                    Description = "Cause the game to look like it's on a Game Boy!", Duration = TimeSpan.FromSeconds(15)
-                },
-                new("Moonwalk", "moonwalk") { Duration = TimeSpan.FromSeconds(30) },
-                new("Magnet Floors", "magfloors") { Duration = TimeSpan.FromSeconds(30) },
-                new("One-Hit KO", "ohko") { Duration = TimeSpan.FromSeconds(15) }
-                //new("Kill Player", "kill")
-            ];
-
-            effects.AddRange(_wType.Select(t => new Effect($"Force Weapon to {t.Value.weapon}", $"lock_{t.Key}") { Duration = TimeSpan.FromSeconds(45), Category = "Lock Weapons" } ));
-            effects.AddRange(_wType.Skip(1).Select(t => new Effect($"Refill {t.Value.weapon}", $"refill_{t.Key}") { Category = "Refill Weapons" }));
-            effects.AddRange(_wType.Skip(1).Take(8).Select(t => new Effect($"Rebuild {t.Value.bossName}", $"revive_{t.Key}") { Category = "Revive Bosses" }));
-
-            return effects;
-        }
-    }
-
-    public override ROMTable ROMTable
-    {
-        get
-        {
-            return new[]
-            {
-                new ROMInfo("Mega Man 2", null, Patching.Ignore, ROMStatus.ValidPatched, s => Patching.MD5(s, "caaeb9ee3b52839de261fd16f93103e6")),
-                new ROMInfo("Mega Man 2", null, Patching.Ignore, ROMStatus.ValidPatched, s => Patching.MD5(s, "8e4bc5b03ffbd4ef91400e92e50dd294")),
-                new ROMInfo("Rockman 2 - Dr. Wily no Nazo", null, Patching.Ignore, ROMStatus.ValidPatched, s => Patching.MD5(s, "055fb8dc626fb1fbadc0a193010a3e3f")),
-                new ROMInfo("Mega Man 2 Randomizer", null, Patching.Ignore, ROMStatus.ValidPatched, s => s.Length == 262160)
-            };
-        }
-    }
-
     private enum SFXType : byte
     {
         TimeStop = 0x21,
@@ -218,7 +165,61 @@ public class MegaMan2 : NESEffectPack
         Doors2 = 0xFE
     }
 
-    public override Game Game { get; } = new("Mega Man 2", "MegaMan2", "NES", ConnectorType.NESConnector);
+    public override EffectList Effects
+    {
+        get
+        {
+            List<Effect> effects =
+            [
+                new("Give Lives", "lives") { Quantity = 9 },
+                new("Give E-Tanks", "etank"),
+                new("Boss E-Tank", "bosshpfull"),
+                new("Refill Health", "hpfull"),
+                new("Grant Invulnerability", "iframes") { Duration = TimeSpan.FromSeconds(15) },
+                new("Freeze Time", "timefreeze")
+                {
+                    Description = "Freezes the game like Quick Man does but you control it!",
+                    Duration = TimeSpan.FromSeconds(15)
+                },
+                new("Can't stop Moving Man", "moveman")
+                {
+                    Description = "Causes Mega Man to uncontrollably move in whatever direction he is looking.",
+                    Duration = TimeSpan.FromSeconds(15)
+                },
+                new("Game Boy Mode", "gameboy")
+                {
+                    Description = "Cause the game to look like it's on a Game Boy!", Duration = TimeSpan.FromSeconds(15)
+                },
+                new("Moonwalk", "moonwalk") { Duration = TimeSpan.FromSeconds(30) },
+                new("Magnet Floors", "magfloors") { Duration = TimeSpan.FromSeconds(30) },
+                new("One-Hit KO", "ohko") { Duration = TimeSpan.FromSeconds(15) },
+                new("Power Jump", "powerjump") { Duration = TimeSpan.FromSeconds(15) },
+                new("Disco Armor Mode", "disco") { Duration = TimeSpan.FromSeconds(30) }
+            ];
+
+            effects.AddRange(_wType.Select(t => new Effect($"Force Weapon to {t.Value.weapon}", $"lock_{t.Key}") { Duration = TimeSpan.FromSeconds(45), Category = "Lock Weapons" }));
+            effects.AddRange(_wType.Skip(1).Select(t => new Effect($"Refill {t.Value.weapon}", $"refill_{t.Key}") { Category = "Refill Weapons" }));
+            effects.AddRange(_wType.Skip(1).Take(8).Select(t => new Effect($"Rebuild {t.Value.bossName}", $"revive_{t.Key}") { Category = "Revive Bosses" }));
+
+            return effects;
+        }
+    }
+
+    public override ROMTable ROMTable
+    {
+        get
+        {
+            return new[]
+            {
+                new ROMInfo("Mega Man 2", null, Patching.Ignore, ROMStatus.ValidPatched, s => Patching.MD5(s, "caaeb9ee3b52839de261fd16f93103e6")),
+                new ROMInfo("Mega Man 2", null, Patching.Ignore, ROMStatus.ValidPatched, s => Patching.MD5(s, "8e4bc5b03ffbd4ef91400e92e50dd294")),
+                new ROMInfo("Rockman 2 - Dr. Wily no Nazo", null, Patching.Ignore, ROMStatus.ValidPatched, s => Patching.MD5(s, "055fb8dc626fb1fbadc0a193010a3e3f")),
+                new ROMInfo("Mega Man 2 Randomizer", null, Patching.Ignore, ROMStatus.ValidPatched, s => s.Length == 262160)
+            };
+        }
+    }
+
+    public override Game Game { get; } = new("Mega Man 2", "MegaMan2", "NES", CrowdControl.Common.ConnectorType.NESConnector);
     
     public override List<string> MetadataCommon { get; } = ["lives", "health", "location"];
 
@@ -329,7 +330,7 @@ public class MegaMan2 : NESEffectPack
                     DelayEffect(request, StandardErrors.ConnectorReadFailure);
                     return;
                 }
-                if (area is 0x09 or 0x0B) //wily tower?
+                if (area is 0x09 or 0x0B)
                 {
                     Respond(request, EffectStatus.FailTemporary, StandardErrors.NoValidTargets, "boss");
                     return;
@@ -385,27 +386,27 @@ public class MegaMan2 : NESEffectPack
             {
                 var moveman = RepeatAction(request,
                     () => Connector.Read8(ADDR_MOVEMENT, out byte b) && (b == 0x03),
-                    () => Connector.Write8(ADDR_MOVEMENT, 0x05) && Connector.SendMessage($"{request.DisplayViewer} forced Mega Man to keep moving."), TimeSpan.FromSeconds(0.01),
+                    () => Connector.Write8(ADDR_MOVEMENT, 0x05) && Connector.SendMessage($"{request.DisplayViewer} forced Mega Man to keep moving."), TimeSpan.FromSeconds(0.1),
                     () => Connector.Read8(ADDR_GAMEPLAY_MODE, out byte mode) && mode == 0xB2, TimeSpan.FromSeconds(5),
-                    () => Connector.Write8(ADDR_MOVEMENT, 0x05), TimeSpan.FromSeconds(0.01), true);
+                    () => Connector.Write8(ADDR_MOVEMENT, 0x05), TimeSpan.FromSeconds(0.1), true);
                 moveman.WhenCompleted.Then(_ =>
                 {
                     Connector.Write8(ADDR_MOVEMENT, 0x03);
                     Connector.SendMessage($"{request.DisplayViewer}'s movement effect has ended.");
                 });
                 return;
-            }   
+            }
             case "gameboy":
             {
                 var gameboy = RepeatAction(request,
                     () => Connector.Read8(ADDR_COLORS, out byte b) && (b == 0x1E),
-                    () => Connector.Write8(ADDR_COLORS, 0x1F) && Connector.SendMessage($"{request.DisplayViewer} enabled Game Boy mode."), TimeSpan.FromSeconds(0.5),
+                    () => Connector.Write8(ADDR_COLORS, 0x5F) && Connector.SendMessage($"{request.DisplayViewer} enabled Game Boy mode with a gnarly green glow!"), TimeSpan.FromSeconds(0.5),
                     () => Connector.Read8(ADDR_GAMEPLAY_MODE, out byte mode) && mode == 0xB2, TimeSpan.FromSeconds(5),
-                    () => Connector.Write8(ADDR_COLORS, 0x1F), TimeSpan.FromSeconds(0.5), true);
+                    () => Connector.Write8(ADDR_COLORS, 0x5F), TimeSpan.FromSeconds(0.5), true);
                 gameboy.WhenCompleted.Then(_ =>
                 {
                     Connector.Write8(ADDR_COLORS, 0x1E);
-                    Connector.SendMessage($"{request.DisplayViewer}'s Game Boy mode has ended.");
+                    Connector.SendMessage($"{request.DisplayViewer}'s Game Boy mode has faded out, back to normal colors!");
                 });
                 return;
             }
@@ -413,29 +414,32 @@ public class MegaMan2 : NESEffectPack
             {
                 var timefreeze = RepeatAction(request,
                     () => Connector.Read8(ADDR_FREEZE, out byte b) && (b == 0x00),
-                    () => Connector.Write8(ADDR_FREEZE, 0x01) && Connector.SendMessage($"{request.DisplayViewer} has frozen time."), TimeSpan.FromSeconds(0.01),
+                    () => Connector.Write8(ADDR_FREEZE, 0x01) && Connector.SendMessage($"{request.DisplayViewer} has frozen time."), TimeSpan.FromSeconds(0.1),
                     () => Connector.Read8(ADDR_GAMEPLAY_MODE, out byte mode) && mode == 0xB2, TimeSpan.FromSeconds(5),
-                    () => Connector.Write8(ADDR_FREEZE, 0x01), TimeSpan.FromSeconds(0.01), true);
+                    () => Connector.Write8(ADDR_FREEZE, 0x01), TimeSpan.FromSeconds(0.1), true);
                 timefreeze.WhenCompleted.Then(_ =>
                 {
                     Connector.Write8(ADDR_FREEZE, 0x00);
-                    Connector.SendMessage($"{request.DisplayViewer}'s time freeze hasended.");
+                    Connector.SendMessage($"{request.DisplayViewer}'s time freeze has ended.");
                 });
                 return;
             }
             case "moonwalk":
+            {
                 var moonwalk = RepeatAction(request,
-                    () => Connector.Read8(0x8904, out byte b) && (b != 0x49),
-                    () => Connector.SendMessage("${request.DisplayViewer} inverted your left/right."), TimeSpan.FromSeconds(1),
+                    () => Connector.Read8(ADDR_MOVEMENT, out byte b) && (b != 0x03), // Check if moving
+                    () => Connector.Write8(ADDR_FLIP_PLAYER, 0x49) && Connector.SendMessage($"{request.DisplayViewer} got Mega Man moonwalking like it's 1985!"), TimeSpan.FromSeconds(0.1),
                     () => Connector.Read8(ADDR_GAMEPLAY_MODE, out byte mode) && mode == 0xB2, TimeSpan.FromSeconds(1),
-                    () => Connector.Write8(0x8904, 0x49), TimeSpan.FromSeconds(1), true);
+                    () => Connector.Write8(ADDR_FLIP_PLAYER, 0x49), TimeSpan.FromSeconds(0.1), true);
                 moonwalk.WhenCompleted.Then(_ =>
                 {
-                    Connector.Write8(0x8904, 0x29);
-                    Connector.SendMessage($"{request.DisplayViewer}'s control inversion has ended.");
+                    Connector.Write8(ADDR_FLIP_PLAYER, 0x29);
+                    Connector.SendMessage($"{request.DisplayViewer}'s moonwalk has ended, Mega Man's back to normal struts!");
                 });
                 return;
+            }
             case "magfloors":
+            {
                 var magfloors = RepeatAction(request,
                     () => Connector.Read8(0xd3c8, out byte b) && (b != 0x03),
                     () => Connector.SendMessage($"{request.DisplayViewer} has magnetized the floors."), TimeSpan.FromSeconds(1),
@@ -447,6 +451,57 @@ public class MegaMan2 : NESEffectPack
                     Connector.SendMessage($"{request.DisplayViewer}'s magnetic field has ended.");
                 });
                 return;
+            }
+            case "powerjump":
+            {
+                byte origJumpHeight = 0x04; // Default original value
+                var powerjump = RepeatAction(request,
+                    () => Connector.Read8(0x8A71, out byte b) && (b != 0x06),
+                    () =>
+                    {
+                        Connector.Read8(0x8A71, out byte current);
+                        origJumpHeight = current;
+                        return Connector.Write8(0x8A71, 0x06) && Connector.SendMessage($"{request.DisplayViewer} gave Mega Man power jumps like he's got springs from a DeLorean!");
+                    }, TimeSpan.FromSeconds(1),
+                    () => Connector.Read8(ADDR_GAMEPLAY_MODE, out byte mode) && mode == 0xB2, TimeSpan.FromSeconds(1),
+                    () => Connector.Write8(0x8A71, 0x06), TimeSpan.FromSeconds(1), true);
+                powerjump.WhenCompleted.Then(_ =>
+                {
+                    Connector.Write8(0x8A71, origJumpHeight);
+                    Connector.SendMessage($"{request.DisplayViewer}'s power jump has ended.");
+                });
+                return;
+            }
+            case "disco":
+            {
+                byte origLight = (byte)SuitColor.DefaultLight;
+                byte origDark = (byte)SuitColor.DefaultDark;
+                var disco = RepeatAction(request,
+                    () => true,
+                    () =>
+                    {
+                        Connector.Read8(ADDR_HERO_COLOR_LIGHT, out origLight);
+                        Connector.Read8(ADDR_HERO_COLOR_DARK, out origDark);
+                        Connector.SendMessage($"{request.DisplayViewer} turned Mega Man into a disco diva!");
+                        return true;
+                    }, TimeSpan.FromSeconds(1),
+                    () => Connector.Read8(ADDR_GAMEPLAY_MODE, out byte mode) && mode == 0xB2, TimeSpan.FromSeconds(1),
+                    () =>
+                    {
+                        byte light = (byte)new Random().Next(0x01, 0x3F + 1);
+                        byte dark = (byte)new Random().Next(0x01, 0x3F + 1);
+                        Connector.Write8(ADDR_HERO_COLOR_LIGHT, light);
+                        Connector.Write8(ADDR_HERO_COLOR_DARK, dark);
+                        return true;
+                    }, TimeSpan.FromSeconds(1), true);
+                disco.WhenCompleted.Then(_ =>
+                {
+                    Connector.Write8(ADDR_HERO_COLOR_LIGHT, origLight);
+                    Connector.Write8(ADDR_HERO_COLOR_DARK, origDark);
+                    Connector.SendMessage($"{request.DisplayViewer}'s disco armor mode has ended - back to blue steel!");
+                });
+                return;
+            }
             default:
                 Respond(request, EffectStatus.FailPermanent, StandardErrors.UnknownEffect, request);
                 return;
@@ -457,9 +512,9 @@ public class MegaMan2 : NESEffectPack
     private void ForceWeapon(EffectRequest request, byte wType, byte bossClear, SuitColor lightColor, SuitColor darkColor, string weaponName, ushort weaponAddress)
     {
         bool hadBefore = false;
-			
-        RepeatAction(request, 
-            () => {
+        RepeatAction(request,
+            () =>
+            {
                 if (_forceActive) { return false; }
                 if (!(Connector.Read8(ADDR_UNKNOWN1, out byte b) && (b == 0x0E))) { return false; }
                 bool result = Connector.Read8(ADDR_WEAPONS, out byte w);
@@ -531,7 +586,6 @@ public class MegaMan2 : NESEffectPack
                     Connector.SendMessage($"{request.DisplayViewer} disabled your {weaponName}.");
                     PlaySFX(SFXType.HPIncrement);
                 }
-
                 return result;
             });
     }
@@ -547,7 +601,7 @@ public class MegaMan2 : NESEffectPack
         bool success = base.StopAllEffects();
         try
         {
-            success &= Connector.Write8(0x8904, 0x29);
+            success &= Connector.Write8(ADDR_FLIP_PLAYER, 0x29);
             success &= Connector.Write8(0xd3c8, 0x00);
         }
         catch { success = false; }
