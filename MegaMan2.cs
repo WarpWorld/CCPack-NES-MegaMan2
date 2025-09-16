@@ -331,7 +331,7 @@ public class MegaMan2 : NESEffectPack
                 }
                 if (area is 0x09 or 0x0B) //wily tower?
                 {
-                    Respond(request, EffectStatus.FailTemporary, StandardErrors.NoValidTargets, "boss");
+                    FastFail(request, EffectStatus.FailTemporary, StandardErrors.NoValidTargets, "boss");
                     return;
                 }
                 TryEffect(request,
