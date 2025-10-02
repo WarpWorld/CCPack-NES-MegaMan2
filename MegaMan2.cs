@@ -143,35 +143,38 @@ public class MegaMan2 : NESEffectPack
         {
             List<Effect> effects =
             [
-                new("Give Lives", "lives") { Quantity = 9 },
-                new("Give E-Tanks", "etank"),
-                new("Boss E-Tank", "bosshpfull"),
-                new("Refill Health", "hpfull"),
+                new("Give Lives", "lives") { Quantity = 9, Alignment = (Alignment)Morality.Helpful + Orderliness.Controlled },
+                new("Give E-Tanks", "etank") { Alignment = (Alignment)Morality.VeryHelpful + Orderliness.Controlled },
+                new("Boss E-Tank", "bosshpfull") { Alignment = (Alignment)Morality.Harmful + Orderliness.Controlled },
+                new("Refill Health", "hpfull") { Alignment = (Alignment)Morality.Helpful + Orderliness.Controlled },
                 //new("Black Armor Mega Man", "barmor"),
-                new("Grant Invulnerability", "iframes") { Duration = TimeSpan.FromSeconds(15) },
+                new("Grant Invulnerability", "iframes") { Duration = TimeSpan.FromSeconds(15), Alignment = (Alignment)Morality.VeryHelpful + Orderliness.Controlled },
                 new("Freeze Time", "timefreeze")
                 {
                     Description = "Freezes the game like Quick Man does but you control it!",
-                    Duration = TimeSpan.FromSeconds(15)
+                    Duration = TimeSpan.FromSeconds(15),
+                    Alignment = (Alignment)Morality.Helpful + Orderliness.Controlled
                 },
                 new("Can't stop Moving Man", "moveman")
                 {
                     Description = "Causes Mega Man to uncontrollably move in whatever direction he is looking.",
-                    Duration = TimeSpan.FromSeconds(15)
+                    Duration = TimeSpan.FromSeconds(15),
+                    Alignment = (Alignment)Morality.SlightlyHarmful + Orderliness.Chaotic
                 },
                 new("Game Boy Mode", "gameboy")
                 {
-                    Description = "Cause the game to look like it's on a Game Boy!", Duration = TimeSpan.FromSeconds(15)
+                    Description = "Cause the game to look like it's on a Game Boy!", Duration = TimeSpan.FromSeconds(15),
+                    Alignment = (Alignment)Morality.Neutral + Orderliness.Controlled
                 },
-                new("Moonwalk", "moonwalk") { Duration = TimeSpan.FromSeconds(30) },
-                new("Magnet Floors", "magfloors") { Duration = TimeSpan.FromSeconds(30) },
-                new("One-Hit KO", "ohko") { Duration = TimeSpan.FromSeconds(15) }
+                new("Moonwalk", "moonwalk") { Duration = TimeSpan.FromSeconds(30), Alignment = (Alignment)Morality.SlightlyHarmful + Orderliness.Chaotic },
+                new("Magnet Floors", "magfloors") { Duration = TimeSpan.FromSeconds(30), Alignment = (Alignment)Morality.Neutral + Orderliness.Chaotic /* TODO: Confirm if Magnet Floors meaningfully harms player movement */ },
+                new("One-Hit KO", "ohko") { Duration = TimeSpan.FromSeconds(15), Alignment = (Alignment)Morality.ExtremelyHarmful + Orderliness.Controlled }
                 //new("Kill Player", "kill")
             ];
 
-            effects.AddRange(_wType.Select(t => new Effect($"Force Weapon to {t.Value.weapon}", $"lock_{t.Key}") { Duration = TimeSpan.FromSeconds(45), Category = "Lock Weapons" } ));
-            effects.AddRange(_wType.Skip(1).Select(t => new Effect($"Refill {t.Value.weapon}", $"refill_{t.Key}") { Category = "Refill Weapons" }));
-            effects.AddRange(_wType.Skip(1).Take(8).Select(t => new Effect($"Rebuild {t.Value.bossName}", $"revive_{t.Key}") { Category = "Revive Bosses" }));
+            effects.AddRange(_wType.Select(t => new Effect($"Force Weapon to {t.Value.weapon}", $"lock_{t.Key}") { Duration = TimeSpan.FromSeconds(45), Category = "Lock Weapons", Alignment = (Alignment)Morality.SlightlyHarmful + Orderliness.Controlled } ));
+            effects.AddRange(_wType.Skip(1).Select(t => new Effect($"Refill {t.Value.weapon}", $"refill_{t.Key}") { Category = "Refill Weapons", Alignment = (Alignment)Morality.SlightlyHelpful + Orderliness.Controlled }));
+            effects.AddRange(_wType.Skip(1).Take(8).Select(t => new Effect($"Rebuild {t.Value.bossName}", $"revive_{t.Key}") { Category = "Revive Bosses", Alignment = (Alignment)Morality.Harmful + Orderliness.Controlled }));
 
             return effects;
         }
