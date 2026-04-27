@@ -451,7 +451,7 @@ public class MegaMan2 : NESEffectPack
                 });
                 return;
             default:
-                Respond(request, EffectStatus.FailPermanent, StandardErrors.UnknownEffect, request);
+                Respond(request, EffectStatus.FailPermanent, StandardErrors.EffectUnknown, request);
                 return;
         }
     }
