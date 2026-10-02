@@ -1,5 +1,11 @@
 ﻿# Mega Man 2
 
+## Pack metadata
+
+- Game identifier: `MegaMan2`
+- Platform: `NES`
+- Connector type: `NESConnector`
+
 ## What this pack provides
 This Crowd Control pack integrates **Mega Man 2** with Crowd Control through its NES pack implementation. Its source defines the game-state checks and effect handling.
 
