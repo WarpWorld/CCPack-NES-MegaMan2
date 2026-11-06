@@ -11,7 +11,8 @@ namespace CrowdControl.Games.Packs.MegaMan2;
 [SuppressMessage("ReSharper", "CommentTypo")]
 public class MegaMan2 : NESEffectPack
 {
-    public MegaMan2(UserRecord player, Func<CrowdControlBlock, bool> responseHandler, Action<object> statusUpdateHandler) : base(player, responseHandler, statusUpdateHandler) { }
+    public MegaMan2(UserRecord player, Func<CrowdControlBlock, bool> responseHandler, Action<object> statusUpdateHandler) : base(player, responseHandler, statusUpdateHandler) {
+    }
 
     private volatile bool _quitting;
     protected override void Dispose(bool disposing)
@@ -137,10 +138,10 @@ public class MegaMan2 : NESEffectPack
         Item3 = 0x04
     }
 
-    public override EffectList Effects
+    public override EffectList Effects { get; } = CreateEffects();
+
+    private static EffectList CreateEffects()
     {
-        get
-        {
             List<Effect> effects =
             [
                 new("Give Lives", "lives") { Quantity = 9, Alignment = (Alignment)Morality.Helpful + Orderliness.Controlled },
@@ -177,7 +178,6 @@ public class MegaMan2 : NESEffectPack
             effects.AddRange(_wType.Skip(1).Take(8).Select(t => new Effect($"Rebuild {t.Value.bossName}", $"revive_{t.Key}") { Category = "Revive Bosses", Alignment = (Alignment)Morality.Harmful + Orderliness.Controlled }));
 
             return effects;
-        }
     }
 
     public override ROMTable ROMTable
